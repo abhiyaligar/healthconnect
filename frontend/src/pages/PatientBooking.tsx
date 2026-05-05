@@ -135,6 +135,13 @@ export default function PatientBooking() {
             </div>
           ))}
         </div>
+        <div className="flex justify-between mt-2 px-1 text-[10px] sm:text-sm font-medium text-navy-400 text-center">
+          <span className={cn("w-16 sm:w-auto", step >= 1 && "text-primary-700")}>Specialty</span>
+          <span className={cn("w-16 sm:w-auto", step >= 2 && "text-primary-700")}>Doctor</span>
+          <span className={cn("w-16 sm:w-auto", step >= 3 && "text-primary-700")}>Time Slot</span>
+          <span className={cn("w-16 sm:w-auto", step >= 4 && "text-primary-700")}>Details</span>
+          <span className={cn("w-16 sm:w-auto", step >= 5 && "text-primary-700")}>Confirm</span>
+        </div>
       </div>
 
       <div className="bg-surface rounded-2xl shadow-skyline border border-navy-100 overflow-hidden min-h-[500px] relative">
@@ -144,7 +151,8 @@ export default function PatientBooking() {
           </button>
         )}
 
-        <div className="p-10 pt-16">
+        <div className="p-6 sm:p-10 pt-16">
+          {/* STEP 1: SPECIALTY */}
           {step === 1 && (
             <div>
               <h2 className="text-2xl font-bold text-navy-900 mb-6">Select a Specialty</h2>
@@ -231,15 +239,48 @@ export default function PatientBooking() {
               <h2 className="text-2xl font-bold text-navy-900 mb-2">Final Step</h2>
               <p className="text-navy-500 mb-8">Confirm your booking for {new Date(selectedSlot.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
               
-              <div className="bg-navy-50 p-6 rounded-2xl border border-navy-100 text-left mb-8">
-                <p className="text-sm font-medium text-navy-600 mb-2">SYMPTOMS & HISTORY</p>
-                <textarea 
-                  value={patientDetails.symptoms}
-                  onChange={e => setPatientDetails(p => ({ ...p, symptoms: e.target.value }))}
-                  className="w-full px-4 py-3 border border-navy-200 rounded-xl text-sm mb-4"
-                  rows={4}
-                  placeholder="Tell us about your symptoms..."
-                />
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-semibold text-navy-700 mb-1.5">Reason for Visit / Symptoms</label>
+                  <textarea 
+                    value={patientDetails.symptoms}
+                    onChange={e => setPatientDetails(p => ({ ...p, symptoms: e.target.value }))}
+                    className="w-full px-4 py-3 border border-navy-200 rounded-xl text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition"
+                    rows={3}
+                    placeholder="e.g. Mild chest pain for the last 2 days..."
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-semibold text-navy-700 mb-1.5">Self-Assessed Severity</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {['Mild', 'Moderate', 'Severe'].map(sev => (
+                      <button
+                        key={sev}
+                        onClick={() => setPatientDetails(p => ({ ...p, severity: sev }))}
+                        className={cn(
+                          "py-2.5 rounded-xl text-sm font-medium border-2 transition-all",
+                          patientDetails.severity === sev 
+                            ? "border-primary-600 bg-primary-50 text-primary-700" 
+                            : "border-navy-100 text-navy-500 hover:border-navy-300"
+                        )}
+                      >
+                        {sev}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-navy-700 mb-1.5">Brief Medical History (Optional)</label>
+                  <textarea 
+                    value={patientDetails.history}
+                    onChange={e => setPatientDetails(p => ({ ...p, history: e.target.value }))}
+                    className="w-full px-4 py-3 border border-navy-200 rounded-xl text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition"
+                    rows={2}
+                    placeholder="Any previous conditions, surgeries, or allergies..."
+                  />
+                </div>
               </div>
 
               <button 

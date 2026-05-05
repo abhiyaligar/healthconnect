@@ -91,7 +91,7 @@ export default function QueuePanel() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-surface rounded-2xl shadow-skyline border border-navy-100 overflow-hidden">
-            <div className="grid grid-cols-[80px_1fr_auto_auto] gap-4 px-5 py-3 bg-navy-50 border-b border-navy-100 text-xs font-semibold text-navy-400 uppercase">
+            <div className="hidden sm:grid grid-cols-[80px_1fr_auto_auto] gap-4 px-5 py-3 bg-navy-50 border-b border-navy-100 text-xs font-semibold text-navy-400 uppercase">
               <span>Token</span>
               <span>Patient & Doctor</span>
               <span className="text-right">Status</span>
@@ -99,18 +99,21 @@ export default function QueuePanel() {
             </div>
 
             {queue.length === 0 ? (
-              <div className="py-20 text-center text-navy-400">Queue is currently empty.</div>
-            ) : queue.map((appt, idx) => (
+              <div className="py-20 text-center text-navy-400 flex flex-col items-center justify-center">
+                <CheckCircle2 size={40} className="mb-3 text-status-open opacity-50" />
+                <p>Queue is currently empty.</p>
+              </div>
+            ) : queue.map((appt) => (
               <div key={appt.id} className={cn(
-                "grid grid-cols-[80px_1fr_auto_auto] gap-4 items-center px-5 py-4 border-b border-navy-100 last:border-0",
+                "flex flex-col sm:grid sm:grid-cols-[80px_1fr_auto_auto] gap-4 items-center px-5 py-4 border-b border-navy-100 last:border-0",
                 appt.status === 'IN_PROGRESS' && "bg-primary-50/50"
               )}>
-                <div className="font-bold text-primary-600">{appt.queue_token}</div>
-                <div>
+                <div className="font-bold text-primary-600 self-start sm:self-auto">{appt.queue_token}</div>
+                <div className="w-full sm:w-auto text-left">
                   <p className="font-semibold text-navy-900">ID: {appt.patient_id.split('-')[0]}</p>
                   <p className="text-xs text-navy-400">Score: {appt.priority_score}</p>
                 </div>
-                <div>
+                <div className="w-full sm:w-auto flex justify-start sm:justify-end">
                   <span className={cn(
                     "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase",
                     appt.status === 'IN_PROGRESS' ? "bg-status-open/10 text-status-open" : "bg-navy-100 text-navy-500"

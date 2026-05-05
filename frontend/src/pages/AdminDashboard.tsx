@@ -229,10 +229,15 @@ export default function AdminDashboard() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12">
-      <div className="flex items-center justify-between">
+      {/* Page Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between items-start gap-4">
         <div>
           <h1 className="text-3xl font-bold text-navy-900 tracking-tight">Analytics & System Overview</h1>
           <p className="text-navy-500 mt-1">Real-time intelligence across all departments · Today, {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+        </div>
+        <div className="flex items-center gap-2 bg-status-open/10 text-status-open px-4 py-2 rounded-xl text-sm font-bold shrink-0">
+          <span className="w-2 h-2 rounded-full bg-status-open animate-pulse inline-block" />
+          System Stable
         </div>
       </div>
 

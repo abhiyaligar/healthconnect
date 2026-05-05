@@ -201,16 +201,20 @@ def get_admin_overview(db: Session = Depends(get_db)):
             "capacity": total_slots or 20
         })
 
-    # 4. Alerts (Recent 6 appointments/status changes)
-    # Just mocking this with recent activity for now
+    # 4. Alerts (Recent 6 status changes)
     recent_events = []
     recent_apts = db.query(Appointment).order_by(Appointment.id.desc()).limit(6).all()
     for apt in recent_apts:
+        atype = "info"
+        if apt.status == "COMPLETED": atype = "success"
+        elif apt.status == "CANCELLED": atype = "error"
+        elif apt.status == "IN_PROGRESS": atype = "warning"
+        
         recent_events.append({
             "id": str(apt.id),
-            "type": "success" if apt.status == "COMPLETED" else "warning",
+            "type": atype,
             "time": "Just now",
-            "message": f"Appointment {apt.queue_token} status changed to {apt.status}"
+            "message": f"Patient {apt.queue_token} is now {apt.status.replace('_', ' ').lower()}."
         })
 
     return {

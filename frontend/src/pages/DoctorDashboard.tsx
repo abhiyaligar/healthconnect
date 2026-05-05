@@ -41,6 +41,24 @@ export default function DoctorDashboard() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState({ diagnosis: '', clinical_notes: '' });
+  const [isConsulting, setIsConsulting] = useState(false);
+  const [showFullChart, setShowFullChart] = useState(false);
+  const [prescription, setPrescription] = useState('');
+  const [followUpDate, setFollowUpDate] = useState('');
+
+  const handlePatientSelect = (appt: Appointment) => {
+    setSelectedPatient(appt);
+    setNotes({ diagnosis: appt.diagnosis || '', clinical_notes: appt.clinical_notes || '' });
+    setIsConsulting(appt.status === 'IN_PROGRESS' || appt.status === 'COMPLETED');
+    setShowFullChart(false);
+    setPrescription('');
+    setFollowUpDate('');
+  };
+
+  const closePanel = () => {
+    setSelectedPatient(null);
+    setShowFullChart(false);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -66,6 +84,7 @@ export default function DoctorDashboard() {
       const res = await api.patch(`/appointments/${apptId}/call`);
       setAppointments(prev => prev.map(a => a.id === apptId ? res.data : a));
       setSelectedPatient(res.data);
+      setIsConsulting(true);
     } catch (err) {
       alert('Failed to start consultation');
     }
@@ -76,6 +95,7 @@ export default function DoctorDashboard() {
       const res = await api.patch(`/appointments/${apptId}/complete`);
       setAppointments(prev => prev.map(a => a.id === apptId ? res.data : a));
       setSelectedPatient(null);
+      setIsConsulting(false);
     } catch (err) {
       alert('Failed to complete consultation');
     }
@@ -164,10 +184,7 @@ export default function DoctorDashboard() {
               ) : appointments.map(appt => (
                 <div 
                   key={appt.id} 
-                  onClick={() => {
-                    setSelectedPatient(appt);
-                    setNotes({ diagnosis: appt.diagnosis || '', clinical_notes: appt.clinical_notes || '' });
-                  }}
+                  onClick={() => handlePatientSelect(appt)}
                   className={cn(
                     "flex items-center justify-between p-5 border-b border-navy-100 last:border-0 hover:bg-navy-50 transition-colors cursor-pointer",
                     appt.status === 'IN_PROGRESS' && "bg-primary-50/50"
@@ -218,21 +235,57 @@ export default function DoctorDashboard() {
       {/* Patient Details Side Panel */}
       {selectedPatient && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-navy-900/40 backdrop-blur-sm" onClick={() => setSelectedPatient(null)} />
-          <div className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col">
+          <div className="absolute inset-0 bg-navy-900/40 backdrop-blur-sm transition-opacity" onClick={closePanel} />
+          <div className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-[slide-left_0.3s_ease-out]">
             <div className="p-8 border-b border-navy-100 flex items-center justify-between bg-navy-50">
               <div>
                 <h2 className="text-xl font-bold text-navy-900">Consultation</h2>
                 <p className="text-sm text-navy-500">{selectedPatient.queue_token} · {selectedPatient.status}</p>
               </div>
-              <button onClick={() => setSelectedPatient(null)} className="p-2 hover:bg-navy-100 rounded-xl text-navy-400">
+              <button onClick={closePanel} className="p-2 hover:bg-navy-100 rounded-xl text-navy-400 transition-colors">
                 <X size={24} />
               </button>
             </div>
 
             <div className="flex-1 overflow-auto p-8 space-y-6">
-              {selectedPatient.status === 'IN_PROGRESS' || selectedPatient.status === 'COMPLETED' ? (
-                <div className="space-y-4">
+              {!isConsulting ? (
+                <>
+                  {/* Priority & Severity */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-surface border border-navy-100 p-4 rounded-xl shadow-sm">
+                      <p className="text-[10px] font-bold text-navy-400 uppercase mb-1">System Priority</p>
+                      <p className={cn("text-lg font-black flex items-center gap-2", 
+                        selectedPatient.priority_score >= 10 ? 'text-status-error' : 
+                        selectedPatient.priority_score >= 5 ? 'text-status-warning' : 'text-primary-600'
+                      )}>
+                        P{selectedPatient.priority_score}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="w-full h-px bg-navy-100" />
+
+                  {/* Patient Input Data */}
+                  <div>
+                    <h3 className="text-sm font-bold text-navy-900 mb-3 flex items-center gap-2"><FileText size={16} className="text-primary-600" /> Appointment Details</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-[10px] font-bold text-navy-400 uppercase mb-1">Diagnosis</p>
+                        <div className="p-3 bg-primary-50/50 border border-primary-100 rounded-lg text-sm text-navy-800">
+                          {selectedPatient.diagnosis || 'No diagnosis recorded.'}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-navy-400 uppercase mb-1">Clinical Notes</p>
+                        <div className="p-3 bg-navy-50 border border-navy-100 rounded-lg text-sm text-navy-700">
+                          {selectedPatient.clinical_notes || 'No clinical notes recorded.'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-6 animate-[fade-in_0.2s_ease-out]">
                   <div>
                     <label className="block text-sm font-bold text-navy-900 mb-2">Diagnosis</label>
                     <input 
@@ -249,7 +302,7 @@ export default function DoctorDashboard() {
                       rows={5}
                       value={notes.clinical_notes}
                       onChange={(e) => setNotes(n => ({...n, clinical_notes: e.target.value}))}
-                      className="w-full px-4 py-3 border border-navy-200 rounded-xl text-sm"
+                      className="w-full px-4 py-3 border border-navy-200 rounded-xl text-sm resize-none"
                       placeholder="Detailed consultation notes..."
                     />
                   </div>
@@ -260,22 +313,22 @@ export default function DoctorDashboard() {
                     Save Notes
                   </button>
                 </div>
-              ) : (
-                <div className="p-10 text-center text-navy-400">
-                  <Activity size={48} className="mx-auto mb-4 opacity-20" />
-                  <p>Start the consultation to enter notes.</p>
-                </div>
               )}
             </div>
 
             <div className="p-6 border-t border-navy-100 bg-white space-y-3">
               {selectedPatient.status === 'CONFIRMED' && (
-                <button 
-                  onClick={() => handleStartConsultation(selectedPatient.id)}
-                  className="w-full py-3.5 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl flex items-center justify-center gap-2"
-                >
-                  <Activity size={18} /> Start Consultation
-                </button>
+                <>
+                  <button 
+                    onClick={() => handleStartConsultation(selectedPatient.id)}
+                    className="w-full py-3.5 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl flex items-center justify-center gap-2"
+                  >
+                    <Activity size={18} /> Start Consultation
+                  </button>
+                  <button onClick={() => setShowFullChart(true)} className="w-full py-3.5 border-2 border-navy-100 text-navy-600 font-bold rounded-xl hover:bg-navy-50 hover:border-navy-200 transition-all">
+                    View Full Chart
+                  </button>
+                </>
               )}
               {selectedPatient.status === 'IN_PROGRESS' && (
                 <button 
@@ -285,6 +338,125 @@ export default function DoctorDashboard() {
                   <CheckCircle2 size={18} /> Complete & Close
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full Chart Modal */}
+      {showFullChart && selectedPatient && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6">
+          <div className="absolute inset-0 bg-navy-900/60 backdrop-blur-sm transition-opacity" onClick={() => setShowFullChart(false)} />
+          <div className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-full animate-[fade-in_0.2s_ease-out]">
+            <div className="p-6 border-b border-navy-100 flex items-center justify-between bg-navy-50 rounded-t-2xl">
+              <div>
+                <h2 className="text-2xl font-bold text-navy-900">Comprehensive Patient Chart</h2>
+                <p className="text-sm text-navy-500">Patient: {selectedPatient.patient_id}</p>
+              </div>
+              <button onClick={() => setShowFullChart(false)} className="p-2 hover:bg-navy-100 rounded-xl text-navy-400 transition-colors">
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-auto p-6 bg-surface">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                {/* Left Column: Demographics & History */}
+                <div className="space-y-6">
+                  <div className="bg-white p-5 border border-navy-100 rounded-xl shadow-sm">
+                    <h3 className="text-sm font-bold text-navy-900 mb-4 border-b border-navy-100 pb-2">Demographics</h3>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between"><span className="text-navy-500">DOB:</span> <span className="font-medium text-navy-900">12/04/1985 (39y)</span></div>
+                      <div className="flex justify-between"><span className="text-navy-500">Gender:</span> <span className="font-medium text-navy-900">Male</span></div>
+                      <div className="flex justify-between"><span className="text-navy-500">Blood Type:</span> <span className="font-medium text-status-error">O+</span></div>
+                      <div className="flex justify-between"><span className="text-navy-500">Weight:</span> <span className="font-medium text-navy-900">185 lbs</span></div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-5 border border-navy-100 rounded-xl shadow-sm">
+                    <h3 className="text-sm font-bold text-navy-900 mb-4 border-b border-navy-100 pb-2">Active Problems</h3>
+                    <ul className="space-y-2 text-sm">
+                      <li className="flex items-center gap-2 text-navy-800"><span className="w-1.5 h-1.5 rounded-full bg-status-warning" /> Hypertension (I10)</li>
+                      <li className="flex items-center gap-2 text-navy-800"><span className="w-1.5 h-1.5 rounded-full bg-status-warning" /> Type 2 Diabetes (E11.9)</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-white p-5 border border-navy-100 rounded-xl shadow-sm">
+                    <h3 className="text-sm font-bold text-navy-900 mb-4 border-b border-navy-100 pb-2">Current Medications</h3>
+                    <ul className="space-y-3 text-sm">
+                      <li className="text-navy-800">
+                        <span className="font-bold">Lisinopril</span> 10mg
+                        <p className="text-[10px] text-navy-500">1 tablet daily</p>
+                      </li>
+                      <li className="text-navy-800">
+                        <span className="font-bold">Metformin</span> 500mg
+                        <p className="text-[10px] text-navy-500">Take with meals, twice daily</p>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Right Column: Past Visits & Clinical Notes */}
+                <div className="md:col-span-2 space-y-6">
+                  <div className="bg-white p-5 border border-navy-100 rounded-xl shadow-sm">
+                    <h3 className="text-sm font-bold text-navy-900 mb-4 flex items-center gap-2"><Clock size={16} className="text-primary-600"/> Encounter History</h3>
+                    
+                    <div className="space-y-4">
+                      {/* Past Visit 1 */}
+                      <div className="p-4 bg-navy-50 rounded-lg border border-navy-100">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-bold text-navy-900 text-sm">Follow-up Consultation</span>
+                          <span className="text-xs font-bold text-navy-400 bg-white px-2 py-1 rounded border border-navy-100">Oct 14, 2025</span>
+                        </div>
+                        <p className="text-sm text-navy-700 mb-2">Patient reported feeling dizzy in the mornings. Adjusted Lisinopril dosage. Blood pressure was slightly elevated.</p>
+                        <div className="flex gap-2 text-[10px] font-bold text-navy-500 uppercase">
+                          <span className="px-2 py-0.5 bg-white rounded border border-navy-200">BP: 135/85</span>
+                          <span className="px-2 py-0.5 bg-white rounded border border-navy-200">HR: 72</span>
+                        </div>
+                      </div>
+
+                      {/* Past Visit 2 */}
+                      <div className="p-4 bg-navy-50 rounded-lg border border-navy-100">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-bold text-navy-900 text-sm">Annual Wellness Visit</span>
+                          <span className="text-xs font-bold text-navy-400 bg-white px-2 py-1 rounded border border-navy-100">Mar 02, 2025</span>
+                        </div>
+                        <p className="text-sm text-navy-700 mb-2">Routine checkup. Labs drawn. A1C improved to 6.8%. Patient advised to continue current diet and exercise regimen.</p>
+                        <div className="flex gap-2 text-[10px] font-bold text-navy-500 uppercase">
+                          <span className="px-2 py-0.5 bg-white rounded border border-navy-200">Labs Normal</span>
+                          <span className="px-2 py-0.5 bg-white rounded border border-navy-200">Weight: 188 lbs</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-5 border border-navy-100 rounded-xl shadow-sm">
+                    <h3 className="text-sm font-bold text-navy-900 mb-4">Diagnostic Reports</h3>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="flex-1 p-3 border border-navy-100 rounded-lg flex items-center justify-between hover:bg-navy-50 cursor-pointer transition-colors">
+                        <div className="flex items-center gap-2">
+                          <FileText size={16} className="text-status-open" />
+                          <span className="text-sm font-bold text-navy-800">CBC Panel</span>
+                        </div>
+                        <span className="text-[10px] text-navy-400">Mar 02</span>
+                      </div>
+                      <div className="flex-1 p-3 border border-navy-100 rounded-lg flex items-center justify-between hover:bg-navy-50 cursor-pointer transition-colors">
+                        <div className="flex items-center gap-2">
+                          <FileText size={16} className="text-primary-600" />
+                          <span className="text-sm font-bold text-navy-800">ECG Results</span>
+                        </div>
+                        <span className="text-[10px] text-navy-400">Oct 14</span>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+            <div className="p-4 border-t border-navy-100 flex justify-end bg-white rounded-b-2xl">
+              <button onClick={() => setShowFullChart(false)} className="px-6 py-2.5 bg-navy-100 hover:bg-navy-200 text-navy-700 font-bold rounded-xl transition-colors">
+                Close Chart
+              </button>
             </div>
           </div>
         </div>
