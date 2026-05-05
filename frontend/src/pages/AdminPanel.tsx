@@ -12,10 +12,10 @@ function cn(...inputs: ClassValue[]) {
 
 // ─── Mock Data ─────────────────────────────────────────────────────────────────
 const mockUsers = [
-  { id: 1, name: 'Dr. Sarah Smith', role: 'Doctor', email: 'sarah.smith@medisync.com', status: 'Active', lastActive: '2 mins ago' },
-  { id: 2, name: 'Admin User', role: 'Admin', email: 'admin@medisync.com', status: 'Active', lastActive: 'Now' },
-  { id: 3, name: 'Receptionist Jane', role: 'Receptionist', email: 'jane.desk@medisync.com', status: 'Active', lastActive: '15 mins ago' },
-  { id: 4, name: 'Dr. David Lee', role: 'Doctor', email: 'david.lee@medisync.com', status: 'Inactive', lastActive: '2 days ago' },
+  { id: 1, name: 'Dr. Sarah Smith', role: 'Doctor', email: 'sarah.smith@healthconnect.com', status: 'Active', lastActive: '2 mins ago' },
+  { id: 2, name: 'Admin User', role: 'Admin', email: 'admin@healthconnect.com', status: 'Active', lastActive: 'Now' },
+  { id: 3, name: 'Receptionist Jane', role: 'Receptionist', email: 'jane.desk@healthconnect.com', status: 'Active', lastActive: '15 mins ago' },
+  { id: 4, name: 'Dr. David Lee', role: 'Doctor', email: 'david.lee@healthconnect.com', status: 'Inactive', lastActive: '2 days ago' },
 ];
 
 const mockAuditLogs = [

@@ -121,7 +121,7 @@ export default function LandingPage() {
             <div className="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center shadow-lg">
               <ShieldAlert size={22} className="text-white" />
             </div>
-            <span className="text-2xl font-bold text-primary-700 tracking-tight">MediSync</span>
+            <span className="text-2xl font-bold text-primary-700 tracking-tight">HealthConnect</span>
           </div>
           <p className="text-xs text-navy-400 font-medium tracking-widest uppercase ml-1">Appointment Stabilizer · v1.0</p>
         </div>
@@ -135,7 +135,7 @@ export default function LandingPage() {
             </span>
           </h1>
           <p className="text-lg text-navy-500 max-w-md leading-relaxed">
-            MediSync dynamically stabilizes overbooked appointments, resolves conflicts in real-time, and ensures every patient gets fair, timely care.
+            HealthConnect dynamically stabilizes overbooked appointments, resolves conflicts in real-time, and ensures every patient gets fair, timely care.
           </p>
 
           {/* Feature pills */}
@@ -180,7 +180,7 @@ export default function LandingPage() {
                 <div className="w-7 h-7 rounded-lg bg-primary-600 flex items-center justify-center">
                   <ShieldAlert size={15} className="text-white" />
                 </div>
-                <span className="font-bold text-primary-700">MediSync</span>
+                <span className="font-bold text-primary-700">HealthConnect</span>
               </div>
               {step === 'select' && (
                 <>
