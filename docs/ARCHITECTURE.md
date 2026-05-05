@@ -1,25 +1,27 @@
 # System Architecture
 
 ## Overview
-HealthConnect is built on a **Modular Monolith** architecture using FastAPI. It is designed to handle high concurrency, specifically "cancellation storms" and appointment overbooking.
+HealthConnect is built on a **Modular Monolith** architecture using FastAPI. It is designed to handle high concurrency and dynamic rescheduling using a "Learning Scheduler" model.
 
 ## Core Modules
 
-### 1. Appointment Service
-Handles the lifecycle of an appointment (Booking, Cancellation, Completion).
+### 1. Scheduling Engine (Phase 1)
+Handles the lifecycle of slots and appointments. 
+- **Dynamic Tracking**: Captures real-time "Call" and "Complete" events to measure doctor efficiency.
+- **Resource Management**: Decouples `Slots` (time blocks) from `Appointments` (bookings) to support controlled overbooking.
 
-### 2. Queue Engine
-Manages the real-time order of patients. Uses a combination of PostgreSQL for persistence and (optionally) Redis for low-latency lookups.
+### 2. The Stabilizer (Conflict Resolver - Phase 2)
+The "Brain" of the system. It dynamically adjusts the schedule when a doctor runs behind schedule or a slot is overbooked. It uses the **Rolling Average Consultation Time** (calculated from Phase 1 data) to predict future conflicts.
 
-### 3. Conflict Resolver
-The "Brain" of the system. When a doctor is overbooked or a cancellation occurs, this module dynamically adjusts the schedule based on:
-- Patient Priority (Emergency vs. Routine)
-- Time of Booking (Fairness)
-- Doctor Fatigue
+### 3. Real-time Engine (Phase 3)
+- **Supabase Realtime**: Leverages Postgres change data capture (CDC) to push live status updates (`IN_PROGRESS`, `BUMPED`) to frontends.
+- **Wait Time Predictor**: Calculates live ETA based on current average consultation times and queue depth.
 
-### 4. Doctor Management
-Tracks doctor availability, specialties, and fatigue levels to prevent burnout.
+### 4. Domain & Resource Management
+Handles doctor profiles, patient medical records, and notification routing.
 
-## Real-time Communication
-- **WebSockets**: Used for pushing live queue updates to patients.
-- **Background Tasks**: Used for sending notifications without blocking API responses.
+## Infrastructure
+- **API**: FastAPI (Python)
+- **Database**: PostgreSQL (Supabase)
+- **Real-time**: Supabase Realtime (WebSockets)
+- **File Storage**: Supabase Storage

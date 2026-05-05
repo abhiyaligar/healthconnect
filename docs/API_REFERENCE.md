@@ -1,7 +1,8 @@
 # API Reference
 
 ## Base URL
-`http://localhost:8000/api/v1`
+`https://healthconnect-psi.vercel.app/api/v1` (Production)
+`http://localhost:8000/api/v1` (Local)
 
 ## Authentication
 Most endpoints require a Bearer Token in the `Authorization` header.
@@ -12,11 +13,14 @@ Most endpoints require a Bearer Token in the `Authorization` header.
 - `POST /auth/login`: Authenticate and receive a JWT.
 - `GET /auth/me`: Retrieve the current user's profile.
 
-### Doctor Endpoints (Planned)
-- `GET /doctors`: List all available doctors.
-- `GET /doctors/{id}/availability`: Check specific availability.
+### Slots Endpoints
+- `GET /slots/`: List available slots. (Filter by `doctor_id` optional).
+- `POST /slots/`: Create a new availability slot.
+- `GET /slots/{id}`: Get specific slot details.
 
-### Appointment Endpoints (Planned)
-- `POST /appointments/book`: Request a slot.
-- `POST /appointments/cancel`: Cancel a booking.
-- `GET /appointments/queue`: View live queue status.
+### Appointment Endpoints
+- `POST /appointments/`: Book a slot. Returns a unique `queue_token`.
+- `GET /appointments/me`: List all appointments for the current authenticated user.
+- `GET /appointments/{id}`: Get specific appointment details (includes nested Slot info).
+- `PATCH /appointments/{id}/call`: (Doctor/Nurse) Start a consultation.
+- `PATCH /appointments/{id}/complete`: (Doctor/Nurse) End a consultation and record duration.

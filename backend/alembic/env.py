@@ -12,6 +12,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from app.core.config import get_settings
 from app.models.base import Base
+from app.models.slot import Slot
+from app.models.appointment import Appointment
 
 settings = get_settings()
 

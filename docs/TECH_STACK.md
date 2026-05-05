@@ -1,21 +1,9 @@
-# Technology Stack Documentation (TECH_STACK.md)
+# Technology Stack Documentation
 
 ## 1. Stack Overview
 
 **Last Updated**: 2026-05-05
-**Version**: 1.0
-
-### Architecture Pattern
-- **Type**: Modular Monolith (MVP-optimized)
-- **Pattern**: Client–Server with Event-Driven Components
-- **Deployment**: Cloud-based (containerized)
-
-#### Justification
-- Microservices are unnecessary for hackathon scope
-- Modular monolith allows:
-  - Faster development
-  - Easier debugging
-  - Future scalability (can split later)
+**Architecture**: Modular Monolith with Serverless Realtime (Supabase)
 
 ---
 
@@ -81,91 +69,11 @@
 
 ### Framework
 - **Framework**: FastAPI
-- **Version**: 0.110.0
-- **Documentation**: https://fastapi.tiangolo.com
-- **Reason**: Async performance, Native WebSocket support, Automatic validation (Pydantic)
-
-### ASGI Server
-- **Server**: Uvicorn
-- **Version**: 0.27.1
-
-### Database
-- **Primary DB**: PostgreSQL
-- **Version**: 16.1
-- **Reason**: ACID compliance, Concurrency control, Complex queries (needed for scheduling)
-
-### ORM
-- **ORM**: SQLAlchemy
-- **Version**: 2.0.25
-- **Reason**: Mature ecosystem, Works well with Alembic
-
-### Migration Tool
-- **Tool**: Alembic
-- **Version**: 1.13.1
-
-### Caching & Messaging
-- **System**: Redis
-- **Version**: 7.2.4
-- **Client**: redis-py 5.0.1
-- **Use Cases**: Queue caching, Distributed locks, Pub/Sub for real-time updates, Rate limiting
-
-### Authentication
-- **Strategy**: JWT
-- **Library**: python-jose 3.3.0
-- **Password Hashing**: passlib 1.7.4 (bcrypt)
-
-### Background Tasks
-- **Tool**: FastAPI BackgroundTasks (initial)
-- **Future Upgrade**: Celery (if scaling needed)
-
----
-
-## 4. Database Configuration
-
-### Connection
-- Async engine via SQLAlchemy
-
-### Migration Strategy
-- Alembic migrations only
-- No direct schema edits
-
-### Backup Strategy
-- Daily dumps (dev optional, prod required)
-
----
-
-## 5. DevOps & Infrastructure
-
-### Version Control
-- **System**: Git
-- **Platform**: GitHub
-- **Branch Strategy**:
-  - `main` → production
-  - `develop` → staging
-  - `feature/*`
-
-### Hosting
-- **Frontend**: Vercel
-- **Backend**: Railway / Render
-- **Database**: Railway PostgreSQL
-
-### CI/CD
-- **Platform**: GitHub Actions
-
-### Monitoring
-- **Error Tracking**: Sentry
-- **Logging**: Structured logs (JSON)
-
----
-
-## 6. Development Tools
-
-### Linting
-- **Frontend**: ESLint 8.56.0
-- **Backend**: Ruff 0.3.0
-
-### Formatting
-- Prettier 3.2.4
+- **Language**: Python 3.11+
+- **ORM**: SQLAlchemy 2.0 (Sync/Async capable)
+- **Database**: PostgreSQL (Supabase)
+- **Real-time Engine**: Supabase Realtime (Replaces custom WebSockets/Redis for high-speed queue updates)
+- **File Storage**: Supabase Storage (Buckets for prescriptions/profiles)
 
 ---
 

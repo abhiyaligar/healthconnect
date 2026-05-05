@@ -4,38 +4,30 @@ This document outlines the PostgreSQL schema for HealthConnect.
 
 ## Tables
 
-### 1. `doctors`
-Stores information about medical professionals.
+### 1. `slots`
+Represents the available time blocks for doctors.
 - `id` (UUID, PK)
-- `full_name` (Text)
-- `specialty` (Text)
-- `fatigue_score` (Integer): 0-100 scale.
-- `is_available` (Boolean)
-- `created_at` (Timestamp)
+- `doctor_id` (UUID): Reference to the doctor user.
+- `start_time` (Timestamp with Timezone)
+- `end_time` (Timestamp with Timezone)
+- `status` (String): `OPEN`, `CLOSED`, `OVERBOOKED`, `CANCELLED`.
+- `max_capacity` (Integer): Default 1.
 
 ### 2. `appointments`
-Tracks patient bookings.
+Tracks patient bookings and real-time consultation performance.
 - `id` (UUID, PK)
-- `patient_id` (UUID, FK to auth.users): Links to Supabase Auth.
-- `doctor_id` (UUID, FK to doctors)
-- `start_time` (Timestamp)
-- `end_time` (Timestamp)
-- `status` (Enum): `pending`, `confirmed`, `cancelled`, `completed`, `rescheduled`.
-- `priority` (Integer): Higher number = Higher priority.
-- `is_overbooked` (Boolean): Flagged by the Conflict Resolver.
+- `patient_id` (UUID): Links to the patient user.
+- `slot_id` (UUID, FK to `slots`): Links to the specific time block.
+- `status` (String): `PENDING`, `CONFIRMED`, `BUMPED`, `CANCELLED`, `IN_PROGRESS`, `COMPLETED`.
+- `queue_token` (String, Unique): Publicly shareable token for queue tracking.
+- `priority_score` (Integer): Used by the Stabilizer for bumping decisions.
+- `actual_start_time` (Timestamp): Recorded when "Call" is clicked.
+- `actual_end_time` (Timestamp): Recorded when "Complete" is clicked.
+- `consultation_duration` (Integer): Calculated duration in minutes.
 
-### 3. `availability_slots`
-Specific time blocks where a doctor is available.
-- `id` (UUID, PK)
-- `doctor_id` (UUID, FK to doctors)
-- `start_time` (Timestamp)
-- `end_time` (Timestamp)
-- `is_booked` (Boolean)
-
-## Entity Relationship Diagram (Conceptual)
+## Entity Relationship Diagram
 ```mermaid
 erDiagram
-    DOCTOR ||--o{ APPOINTMENT : "has"
-    USER ||--o{ APPOINTMENT : "books"
-    DOCTOR ||--o{ AVAILABILITY_SLOTS : "defines"
+    SLOTS ||--o{ APPOINTMENTS : "contains"
+    USER ||--o{ APPOINTMENTS : "books"
 ```
