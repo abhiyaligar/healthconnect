@@ -1,33 +1,65 @@
 # Database Schema
 
-This document outlines the PostgreSQL schema for HealthConnect.
+HealthConnect uses a Supabase-managed PostgreSQL database.
 
 ## Tables
 
-### 1. `slots`
-Represents the available time blocks for doctors.
-- `id` (UUID, PK)
-- `doctor_id` (UUID): Reference to the doctor user.
-- `start_time` (Timestamp with Timezone)
-- `end_time` (Timestamp with Timezone)
-- `status` (String): `OPEN`, `CLOSED`, `OVERBOOKED`, `CANCELLED`.
-- `max_capacity` (Integer): Default 1.
+### `slots`
+- `id`: UUID (PK)
+- `doctor_id`: UUID
+- `start_time`: TIMESTAMPTZ
+- `end_time`: TIMESTAMPTZ
+- `status`: VARCHAR
+- `max_capacity`: INTEGER
 
-### 2. `appointments`
-Tracks patient bookings and real-time consultation performance.
-- `id` (UUID, PK)
-- `patient_id` (UUID): Links to the patient user.
-- `slot_id` (UUID, FK to `slots`): Links to the specific time block.
-- `status` (String): `PENDING`, `CONFIRMED`, `BUMPED`, `CANCELLED`, `IN_PROGRESS`, `COMPLETED`.
-- `queue_token` (String, Unique): Publicly shareable token for queue tracking.
-- `priority_score` (Integer): Used by the Stabilizer for bumping decisions.
-- `actual_start_time` (Timestamp): Recorded when "Call" is clicked.
-- `actual_end_time` (Timestamp): Recorded when "Complete" is clicked.
-- `consultation_duration` (Integer): Calculated duration in minutes.
+### `appointments`
+- `id`: UUID (PK)
+- `patient_id`: UUID
+- `slot_id`: UUID (FK)
+- `status`: VARCHAR
+- `queue_token`: VARCHAR
+- `priority_score`: INTEGER
+- **Clinical Tracking**:
+    - `clinical_notes`: TEXT (Doctor's notes)
+    - `diagnosis`: TEXT (Clinical diagnosis)
+    - `actual_start_time`: TIMESTAMPTZ
+    - `actual_end_time`: TIMESTAMPTZ
+    - `consultation_duration`: INTEGER
 
-## Entity Relationship Diagram
+### `medical_records`
+Stores links to files uploaded to Supabase Storage.
+- `id`: UUID (PK)
+- `appointment_id`: UUID (FK, Optional)
+- `patient_id`: UUID (FK)
+- `doctor_id`: UUID (FK)
+- `file_url`: VARCHAR (Supabase Storage URL)
+- `file_type`: VARCHAR (e.g., LAB_REPORT, PRESCRIPTION)
+- `description`: VARCHAR
+- `created_at`: TIMESTAMPTZ
+
+### `doctor_profiles`
+- `id`: UUID (PK)
+- `user_id`: UUID
+- `full_name`: VARCHAR
+- `specialty`: VARCHAR
+- `bio`: TEXT
+- `avg_consultation_time`: INTEGER
+- `manual_speed_factor`: FLOAT
+
+### `patient_profiles`
+- `id`: UUID (PK)
+- `user_id`: UUID
+- `full_name`: VARCHAR
+- `date_of_birth`: DATE
+- `gender`: VARCHAR
+- `base_priority`: INTEGER
+
+## Relationships
+
 ```mermaid
 erDiagram
-    SLOTS ||--o{ APPOINTMENTS : "contains"
-    USER ||--o{ APPOINTMENTS : "books"
+    slots ||--o{ appointments : contains
+    appointments ||--o{ medical_records : "has reports"
+    patient_profiles ||--o{ appointments : books
+    doctor_profiles ||--o{ slots : manages
 ```

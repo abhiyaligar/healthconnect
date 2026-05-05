@@ -1,27 +1,20 @@
-# System Architecture
+# Architecture Overview
 
-## Overview
-HealthConnect is built on a **Modular Monolith** architecture using FastAPI. It is designed to handle high concurrency and dynamic rescheduling using a "Learning Scheduler" model.
+HealthConnect is a data-driven scheduling engine.
 
-## Core Modules
+## Key Layers
 
-### 1. Scheduling Engine (Phase 1)
-Handles the lifecycle of slots and appointments. 
-- **Dynamic Tracking**: Captures real-time "Call" and "Complete" events to measure doctor efficiency.
-- **Resource Management**: Decouples `Slots` (time blocks) from `Appointments` (bookings) to support controlled overbooking.
-
-### 2. The Stabilizer (Conflict Resolver - Phase 2)
-The "Brain" of the system. It dynamically adjusts the schedule when a doctor runs behind schedule or a slot is overbooked. It uses the **Rolling Average Consultation Time** (calculated from Phase 1 data) to predict future conflicts.
-
-### 3. Real-time Engine (Phase 3)
-- **Supabase Realtime**: Leverages Postgres change data capture (CDC) to push live status updates (`IN_PROGRESS`, `BUMPED`) to frontends.
-- **Wait Time Predictor**: Calculates live ETA based on current average consultation times and queue depth.
-
-### 4. Domain & Resource Management
-Handles doctor profiles, patient medical records, and notification routing.
+1.  **Identity Layer**: Manages roles and profiles.
+2.  **Tracking Layer**: Captures live performance data.
+3.  **Clinical Layer (New)**: Handles medical documentation, diagnoses, and secure file storage (via Supabase Storage).
+4.  **History Layer (New)**: Provides a consolidated view of patient interactions across multiple consultations.
 
 ## Infrastructure
-- **API**: FastAPI (Python)
-- **Database**: PostgreSQL (Supabase)
-- **Real-time**: Supabase Realtime (WebSockets)
-- **File Storage**: Supabase Storage
+
+### Medical Storage
+Medical reports are stored in the **`medical-records`** Supabase bucket. Access is mediated through the Backend API to ensure that only authorized doctors and the specific patient can retrieve the file URLs.
+
+### Data Model Logic
+- **Appointments** act as the central "event" record.
+- **MedicalRecords** are linked to appointments but can also exist as general patient files.
+- **Profiles** store the "State" (Avg duration, Priority).
