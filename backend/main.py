@@ -11,6 +11,7 @@ from app.api.v1.history import router as history_router
 
 settings = get_settings()
 
+# Force restart
 app = FastAPI(title=settings.PROJECT_NAME)
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])

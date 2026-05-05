@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
+import uuid as uuid_pkg
 from app.core.database import get_db
 from app.models import PatientProfile
 from app.schemas.profile import PatientProfileOut, PatientProfileUpdate, PatientProfileCreate
@@ -13,7 +14,8 @@ def get_my_profile(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
-    profile = db.query(PatientProfile).filter(PatientProfile.user_id == current_user["id"]).first()
+    user_id = uuid_pkg.UUID(str(current_user["id"]))
+    profile = db.query(PatientProfile).filter(PatientProfile.user_id == user_id).first()
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
     return profile
@@ -24,11 +26,12 @@ def create_my_profile(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
-    existing = db.query(PatientProfile).filter(PatientProfile.user_id == current_user["id"]).first()
+    user_id = uuid_pkg.UUID(str(current_user["id"]))
+    existing = db.query(PatientProfile).filter(PatientProfile.user_id == user_id).first()
     if existing:
         raise HTTPException(status_code=400, detail="Profile already exists")
     
-    db_profile = PatientProfile(**profile.model_dump(), user_id=current_user["id"])
+    db_profile = PatientProfile(**profile.model_dump(), user_id=user_id)
     db.add(db_profile)
     db.commit()
     db.refresh(db_profile)
@@ -40,7 +43,8 @@ def update_my_profile(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
-    db_profile = db.query(PatientProfile).filter(PatientProfile.user_id == current_user["id"]).first()
+    user_id = uuid_pkg.UUID(str(current_user["id"]))
+    db_profile = db.query(PatientProfile).filter(PatientProfile.user_id == user_id).first()
     if not db_profile:
         raise HTTPException(status_code=404, detail="Profile not found")
     

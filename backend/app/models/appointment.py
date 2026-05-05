@@ -8,7 +8,7 @@ class Appointment(Base):
     __tablename__ = "appointments"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    patient_id = Column(UUID(as_uuid=True), nullable=False)  # Reference to patient user
+    patient_id = Column(String, ForeignKey("patient_profiles.custom_id"), nullable=False)
     slot_id = Column(UUID(as_uuid=True), ForeignKey("slots.id"), nullable=False)
     
     status = Column(String, default="PENDING")  # PENDING, CONFIRMED, BUMPED, CANCELLED, IN_PROGRESS, COMPLETED

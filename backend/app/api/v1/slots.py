@@ -17,7 +17,7 @@ def create_slot(slot: SlotCreate, db: Session = Depends(get_db)):
     return db_slot
 
 @router.get("/", response_model=List[SlotOut])
-def list_slots(doctor_id: Optional[UUID] = None, db: Session = Depends(get_db)):
+def list_slots(doctor_id: Optional[str] = None, db: Session = Depends(get_db)):
     query = db.query(Slot)
     if doctor_id:
         query = query.filter(Slot.doctor_id == doctor_id)

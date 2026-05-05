@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional, List
 
 class SlotBase(BaseModel):
-    doctor_id: UUID
+    doctor_id: str
     start_time: datetime
     end_time: datetime
     status: str = "OPEN"

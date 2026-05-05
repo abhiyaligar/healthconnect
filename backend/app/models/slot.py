@@ -7,7 +7,7 @@ class Slot(Base):
     __tablename__ = "slots"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    doctor_id = Column(UUID(as_uuid=True), nullable=False)  # Reference to doctor user
+    doctor_id = Column(String, ForeignKey("doctor_profiles.custom_id"), nullable=False)
     start_time = Column(DateTime(timezone=True), nullable=False)
     end_time = Column(DateTime(timezone=True), nullable=False)
     status = Column(String, default="OPEN")  # OPEN, CLOSED, OVERBOOKED, CANCELLED

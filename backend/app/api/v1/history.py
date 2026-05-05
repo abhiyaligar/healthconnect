@@ -11,7 +11,7 @@ router = APIRouter()
 
 @router.get("/{patient_id}", response_model=List[AppointmentOut])
 def get_patient_clinical_history(
-    patient_id: UUID,
+    patient_id: str,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
@@ -21,8 +21,12 @@ def get_patient_clinical_history(
     """
     # Security check: User must be DOCTOR or the PATIENT itself
     is_doctor = current_user.user_metadata.get("role") == "DOCTOR"
-    if not is_doctor and str(current_user["id"]) != str(patient_id):
-         raise HTTPException(status_code=403, detail="Access denied")
+    
+    if not is_doctor:
+        # Check if the custom_id belongs to the current user
+        profile = db.query(PatientProfile).filter(PatientProfile.custom_id == patient_id).first()
+        if not profile or str(profile.user_id) != str(current_user["id"]):
+            raise HTTPException(status_code=403, detail="Access denied")
 
     history = (
         db.query(Appointment)
@@ -35,7 +39,7 @@ def get_patient_clinical_history(
 
 @router.get("/{patient_id}/records", response_model=List[MedicalRecordOut])
 def get_patient_records(
-    patient_id: UUID,
+    patient_id: str,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
@@ -43,8 +47,11 @@ def get_patient_records(
     Returns all uploaded medical records for a patient.
     """
     is_doctor = current_user.user_metadata.get("role") == "DOCTOR"
-    if not is_doctor and str(current_user["id"]) != str(patient_id):
-         raise HTTPException(status_code=403, detail="Access denied")
+    
+    if not is_doctor:
+        profile = db.query(PatientProfile).filter(PatientProfile.custom_id == patient_id).first()
+        if not profile or str(profile.user_id) != str(current_user["id"]):
+            raise HTTPException(status_code=403, detail="Access denied")
 
     records = (
         db.query(MedicalRecord)

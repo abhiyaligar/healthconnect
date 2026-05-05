@@ -23,7 +23,7 @@ class ClinicalNotesUpdate(BaseModel):
 
 class AppointmentOut(AppointmentBase):
     id: UUID
-    patient_id: UUID
+    patient_id: str
     queue_token: Optional[str] = None
     actual_start_time: Optional[datetime] = None
     actual_end_time: Optional[datetime] = None
@@ -35,6 +35,7 @@ class AppointmentOut(AppointmentBase):
 
 class MedicalRecordOut(BaseModel):
     id: UUID
+    patient_id: str
     appointment_id: Optional[UUID] = None
     file_url: str
     file_type: str

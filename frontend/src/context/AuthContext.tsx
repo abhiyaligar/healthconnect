@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 
 export type Role = 'patient' | 'doctor' | 'receptionist' | 'admin';
 
@@ -6,10 +6,12 @@ interface AuthState {
   isLoggedIn: boolean;
   role: Role | null;
   name: string;
+  token: string | null;
+  userId: string | null;
 }
 
 interface AuthContextType extends AuthState {
-  login: (role: Role, name: string) => void;
+  login: (role: Role, name: string, token: string, userId: string) => void;
   logout: () => void;
 }
 
@@ -17,17 +19,21 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 const STORAGE_KEY = 'medisync_auth';
 
-// NOTE: Admin role and permissions are assigned by the backend database.
-// In production: POST /api/v1/auth/login → The response JWT contains the authorized role.
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [auth, setAuth] = useState<AuthState>({ isLoggedIn: false, role: null, name: '' });
+  const [auth, setAuth] = useState<AuthState>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : { isLoggedIn: false, role: null, name: '', token: null, userId: null };
+  });
 
-  const login = useCallback((role: Role, name: string) => {
-    setAuth({ isLoggedIn: true, role, name });
+  const login = useCallback((role: Role, name: string, token: string, userId: string) => {
+    const newState = { isLoggedIn: true, role, name, token, userId };
+    setAuth(newState);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
   }, []);
 
   const logout = useCallback(() => {
-    setAuth({ isLoggedIn: false, role: null, name: '' });
+    setAuth({ isLoggedIn: false, role: null, name: '', token: null, userId: null });
+    localStorage.removeItem(STORAGE_KEY);
   }, []);
 
   return (
@@ -43,12 +49,12 @@ export function useAuth() {
   return ctx;
 }
 
-/** Returns the default home path for a given role */
 export function roleHomePath(role: Role): string {
   switch (role) {
     case 'patient':       return '/book';
     case 'doctor':        return '/doctors';
     case 'receptionist':  return '/reception';
     case 'admin':         return '/admin';
+    default:              return '/';
   }
 }

@@ -12,6 +12,7 @@ class UserAuth(BaseModel):
 
 class SignupRequest(UserAuth):
     full_name: str
+    mobile: str
     role: UserRole
 
 class UserResponse(BaseModel):

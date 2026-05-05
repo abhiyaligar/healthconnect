@@ -3,7 +3,8 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.schemas.auth import UserAuth, SignupRequest, TokenResponse, UserResponse, UserRole
 from app.core.supabase import get_supabase
 from app.core.database import get_db
-from app.models import DoctorProfile, PatientProfile
+from app.models.doctor import DoctorProfile
+from app.models.patient import PatientProfile
 from sqlalchemy.orm import Session
 from gotrue.errors import AuthApiError
 
@@ -37,7 +38,8 @@ async def signup(user_data: SignupRequest, db: Session = Depends(get_db)):
             "options": {
                 "data": {
                     "role": user_data.role,
-                    "full_name": user_data.full_name
+                    "full_name": user_data.full_name,
+                    "mobile": user_data.mobile
                 }
             }
         })
@@ -49,15 +51,28 @@ async def signup(user_data: SignupRequest, db: Session = Depends(get_db)):
         user_id = response.user.id
         
         if user_data.role == UserRole.DOCTOR:
+            prefix = user_data.mobile[:5]
+            name_part = user_data.full_name[:4].replace(" ", "").upper()
+            custom_id = f"{prefix}-{name_part}"
+            
             db_profile = DoctorProfile(
                 user_id=user_id,
                 full_name=user_data.full_name,
-                specialty="General" # Default placeholder
+                mobile=user_data.mobile,
+                custom_id=custom_id,
+                specialty="General"
             )
         else:
+            # Generate custom_id: first 5 of mobile + 4 chars of name
+            prefix = user_data.mobile[:5]
+            name_part = user_data.full_name[:4].replace(" ", "").upper()
+            custom_id = f"{prefix}-{name_part}"
+            
             db_profile = PatientProfile(
                 user_id=user_id,
-                # PatientProfile doesn't have full_name yet, we should add it or use metadata
+                full_name=user_data.full_name,
+                mobile=user_data.mobile,
+                custom_id=custom_id,
                 base_priority=0
             )
         

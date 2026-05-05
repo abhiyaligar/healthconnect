@@ -19,6 +19,9 @@ def book_appointment(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
+    # Ensure current_user["id"] is a UUID object for SQLAlchemy
+    user_id = uuid_pkg.UUID(str(current_user["id"]))
+    
     db_slot = db.query(Slot).filter(Slot.id == appointment.slot_id).first()
     if not db_slot:
         raise HTTPException(status_code=404, detail="Slot not found")
@@ -26,13 +29,17 @@ def book_appointment(
     if db_slot.status == "CLOSED":
         raise HTTPException(status_code=400, detail="Slot is closed")
 
-    patient_profile = db.query(PatientProfile).filter(PatientProfile.user_id == current_user["id"]).first()
-    base_priority = patient_profile.base_priority if patient_profile else 0
+    patient_profile = db.query(PatientProfile).filter(PatientProfile.user_id == user_id).first()
+    if not patient_profile:
+        raise HTTPException(status_code=404, detail="Patient profile not found")
+        
+    base_priority = patient_profile.base_priority
+    patient_custom_id = patient_profile.custom_id
 
     queue_token = f"HC-{str(uuid_pkg.uuid4())[:8].upper()}"
 
     db_appointment = Appointment(
-        patient_id=current_user["id"],
+        patient_id=patient_custom_id,
         slot_id=appointment.slot_id,
         queue_token=queue_token,
         status="CONFIRMED",
@@ -49,7 +56,24 @@ def list_my_appointments(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
-    return db.query(Appointment).filter(Appointment.patient_id == current_user["id"]).all()
+    user_id = uuid_pkg.UUID(str(current_user["id"]))
+    profile = db.query(PatientProfile).filter(PatientProfile.user_id == user_id).first()
+    if not profile:
+        return []
+    return db.query(Appointment).filter(Appointment.patient_id == profile.custom_id).all()
+
+@router.get("/doctor/me", response_model=List[AppointmentOut])
+def list_doctor_appointments(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    user_id = uuid_pkg.UUID(str(current_user["id"]))
+    return db.query(Appointment).join(Slot).filter(Slot.doctor_id == user_id).all()
+
+@router.get("/all", response_model=List[AppointmentOut])
+def list_all_appointments(db: Session = Depends(get_db)):
+    """Admin endpoint to see the full queue"""
+    return db.query(Appointment).filter(Appointment.status != 'CANCELLED').all()
 
 @router.patch("/{appointment_id}/call", response_model=AppointmentOut)
 def start_consultation(appointment_id: UUID, db: Session = Depends(get_db)):
@@ -59,6 +83,30 @@ def start_consultation(appointment_id: UUID, db: Session = Depends(get_db)):
     
     db_appointment.status = "IN_PROGRESS"
     db_appointment.actual_start_time = datetime.utcnow()
+    db.commit()
+    db.refresh(db_appointment)
+    return db_appointment
+
+    return db_appointment
+
+@router.patch("/{appointment_id}/no-show", response_model=AppointmentOut)
+def mark_no_show(appointment_id: UUID, db: Session = Depends(get_db)):
+    db_appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
+    if not db_appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+    
+    db_appointment.status = "CANCELLED"
+    db.commit()
+    db.refresh(db_appointment)
+    return db_appointment
+
+@router.patch("/{appointment_id}/bump", response_model=AppointmentOut)
+def bump_priority(appointment_id: UUID, db: Session = Depends(get_db)):
+    db_appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
+    if not db_appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+    
+    db_appointment.priority_score += 5
     db.commit()
     db.refresh(db_appointment)
     return db_appointment
@@ -92,13 +140,13 @@ def update_clinical_notes(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
-    # Security: Ensure current_user is the doctor of this appointment
+    user_id = uuid_pkg.UUID(str(current_user["id"]))
     db_appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
     if not db_appointment:
         raise HTTPException(status_code=404, detail="Appointment not found")
     
     # Check if doctor owns the slot
-    if db_appointment.slot.doctor_id != current_user["id"]:
+    if db_appointment.slot.doctor_id != user_id:
         raise HTTPException(status_code=403, detail="Not authorized to edit this appointment")
     
     db_appointment.clinical_notes = notes.clinical_notes
@@ -116,11 +164,12 @@ async def upload_record(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
+    user_id = uuid_pkg.UUID(str(current_user["id"]))
     db_appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
     if not db_appointment:
         raise HTTPException(status_code=404, detail="Appointment not found")
 
-    if db_appointment.slot.doctor_id != current_user["id"]:
+    if db_appointment.slot.doctor_id != user_id:
         raise HTTPException(status_code=403, detail="Not authorized to add records to this appointment")
 
     # Upload to Supabase Storage
@@ -130,7 +179,7 @@ async def upload_record(
     db_record = MedicalRecord(
         appointment_id=appointment_id,
         patient_id=db_appointment.patient_id,
-        doctor_id=current_user["id"],
+        doctor_id=user_id,
         file_url=file_url,
         file_type=file_type,
         description=description
