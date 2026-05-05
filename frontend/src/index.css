@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-navy-800 antialiased;
+  }
+}
+
+@layer utilities {
+  .shadow-skyline {
+    box-shadow: 0 10px 30px rgba(25, 28, 30, 0.08);
+  }
+}
