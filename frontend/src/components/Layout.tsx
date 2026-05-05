@@ -85,7 +85,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <aside className="w-64 bg-surface border-r border-navy-100 flex flex-col">
         {/* Brand */}
         <div className="p-6 border-b border-navy-100">
-          <h1 className="text-2xl font-bold text-primary-700 tracking-tight">MediSync</h1>
+          <h1 className="text-2xl font-bold text-primary-700 tracking-tight">HealthConnect</h1>
           <p className="text-xs text-navy-400 mt-0.5">Appointment Stabilizer</p>
         </div>
 
