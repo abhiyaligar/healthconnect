@@ -1,33 +1,56 @@
 # Database Schema
 
-This document outlines the PostgreSQL schema for HealthConnect.
+HealthConnect uses a Supabase-managed PostgreSQL database. The schema is designed for high-concurrency scheduling and real-time performance tracking.
 
 ## Tables
 
-### 1. `slots`
-Represents the available time blocks for doctors.
-- `id` (UUID, PK)
-- `doctor_id` (UUID): Reference to the doctor user.
-- `start_time` (Timestamp with Timezone)
-- `end_time` (Timestamp with Timezone)
-- `status` (String): `OPEN`, `CLOSED`, `OVERBOOKED`, `CANCELLED`.
-- `max_capacity` (Integer): Default 1.
+### `slots`
+Defines blocks of time where a doctor is available.
+- `id`: UUID (PK)
+- `doctor_id`: UUID (Links to Supabase Auth user)
+- `start_time`: TIMESTAMPTZ
+- `end_time`: TIMESTAMPTZ
+- `status`: VARCHAR (OPEN, CLOSED, OVERBOOKED)
+- `max_capacity`: INTEGER (Default 1)
 
-### 2. `appointments`
-Tracks patient bookings and real-time consultation performance.
-- `id` (UUID, PK)
-- `patient_id` (UUID): Links to the patient user.
-- `slot_id` (UUID, FK to `slots`): Links to the specific time block.
-- `status` (String): `PENDING`, `CONFIRMED`, `BUMPED`, `CANCELLED`, `IN_PROGRESS`, `COMPLETED`.
-- `queue_token` (String, Unique): Publicly shareable token for queue tracking.
-- `priority_score` (Integer): Used by the Stabilizer for bumping decisions.
-- `actual_start_time` (Timestamp): Recorded when "Call" is clicked.
-- `actual_end_time` (Timestamp): Recorded when "Complete" is clicked.
-- `consultation_duration` (Integer): Calculated duration in minutes.
+### `appointments`
+Defines patient bookings within a slot.
+- `id`: UUID (PK)
+- `patient_id`: UUID (Links to Supabase Auth user)
+- `slot_id`: UUID (FK -> slots.id)
+- `status`: VARCHAR (CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED)
+- `queue_token`: VARCHAR (Unique, e.g., HC-A1B2)
+- `priority_score`: INTEGER (Calculated from Patient Profile)
+- **Tracking Fields**:
+    - `actual_start_time`: TIMESTAMPTZ
+    - `actual_end_time`: TIMESTAMPTZ
+    - `consultation_duration`: INTEGER (Minutes)
+
+### `doctor_profiles`
+Professional identity and scheduling intelligence for doctors.
+- `id`: UUID (PK)
+- `user_id`: UUID (Unique, Auth Link)
+- `full_name`: VARCHAR
+- `specialty`: VARCHAR
+- `bio`: TEXT
+- `avg_consultation_time`: INTEGER (Calculated Rolling Average)
+- `manual_speed_factor`: FLOAT (Override for scheduler speed)
+- `status`: VARCHAR (ACTIVE, IN_ACTIVE)
+
+### `patient_profiles`
+Medical identity and priority settings for patients.
+- `id`: UUID (PK)
+- `user_id`: UUID (Unique, Auth Link)
+- `date_of_birth`: DATE
+- `gender`: VARCHAR
+- `base_priority`: INTEGER (Contributes to appointment priority)
+- `medical_history`: TEXT
 
 ## Entity Relationship Diagram
+
 ```mermaid
 erDiagram
-    SLOTS ||--o{ APPOINTMENTS : "contains"
-    USER ||--o{ APPOINTMENTS : "books"
+    slots ||--o{ appointments : contains
+    doctor_profiles ||--o{ slots : manages
+    patient_profiles ||--o{ appointments : books
 ```

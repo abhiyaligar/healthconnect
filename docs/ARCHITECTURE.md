@@ -1,27 +1,23 @@
-# System Architecture
+# Architecture Overview
 
-## Overview
-HealthConnect is built on a **Modular Monolith** architecture using FastAPI. It is designed to handle high concurrency and dynamic rescheduling using a "Learning Scheduler" model.
+HealthConnect is built on a **Learning Scheduler** architecture, which minimizes overbooking by adapting to real-world consultation speeds.
 
-## Core Modules
+## Core Layers
 
-### 1. Scheduling Engine (Phase 1)
-Handles the lifecycle of slots and appointments. 
-- **Dynamic Tracking**: Captures real-time "Call" and "Complete" events to measure doctor efficiency.
-- **Resource Management**: Decouples `Slots` (time blocks) from `Appointments` (bookings) to support controlled overbooking.
+1.  **Identity & Profile Layer**: Manages the persistent data for Doctors and Patients, including historical performance metrics and priority flags.
+2.  **Tracking & Analytics Layer**: Captures real-time consultation durations and calculates a **Rolling Average (last 10)** to feed into the scheduler.
+3.  **The Stabilizer (Phase 2)**: Resolves overbooked slots by adjusting future appointments based on the doctor's current pace.
 
-### 2. The Stabilizer (Conflict Resolver - Phase 2)
-The "Brain" of the system. It dynamically adjusts the schedule when a doctor runs behind schedule or a slot is overbooked. It uses the **Rolling Average Consultation Time** (calculated from Phase 1 data) to predict future conflicts.
+## Data Flow (Intelligence)
 
-### 3. Real-time Engine (Phase 3)
-- **Supabase Realtime**: Leverages Postgres change data capture (CDC) to push live status updates (`IN_PROGRESS`, `BUMPED`) to frontends.
-- **Wait Time Predictor**: Calculates live ETA based on current average consultation times and queue depth.
+1.  **Event**: Doctor clicks "Complete Consultation".
+2.  **Capture**: System records `actual_end_time` and calculates `duration`.
+3.  **Analyze**: `AnalyticsService` fetches the last 10 records and updates `DoctorProfile.avg_consultation_time`.
+4.  **Feedback**: Future bookings for this doctor use the updated average for more accurate slot sizing.
 
-### 4. Domain & Resource Management
-Handles doctor profiles, patient medical records, and notification routing.
-
-## Infrastructure
-- **API**: FastAPI (Python)
+## Tech Stack
+- **Backend**: FastAPI (Python)
 - **Database**: PostgreSQL (Supabase)
-- **Real-time**: Supabase Realtime (WebSockets)
-- **File Storage**: Supabase Storage
+- **ORM**: SQLAlchemy 2.0
+- **Migrations**: Alembic
+- **Real-time**: Supabase Realtime (Planned)

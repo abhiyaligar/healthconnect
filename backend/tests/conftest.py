@@ -50,7 +50,16 @@ def mock_user():
     return {"id": user_id, "email": "test@example.com"}
 
 @pytest.fixture
-def authenticated_client(client, mock_user):
+def authenticated_client(client, mock_user, db):
+    from app.models.patient import PatientProfile
+    
+    # Ensure a profile exists for the mock user
+    existing = db.query(PatientProfile).filter(PatientProfile.user_id == mock_user["id"]).first()
+    if not existing:
+        db_profile = PatientProfile(user_id=mock_user["id"], base_priority=0)
+        db.add(db_profile)
+        db.commit()
+
     def override_get_current_user():
         return mock_user
     

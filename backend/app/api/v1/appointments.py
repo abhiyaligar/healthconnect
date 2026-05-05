@@ -5,10 +5,10 @@ from uuid import UUID
 from datetime import datetime
 import uuid as uuid_pkg
 from app.core.database import get_db
-from app.models.appointment import Appointment
-from app.models.slot import Slot
+from app.models import Appointment, Slot, PatientProfile
 from app.schemas.appointment import AppointmentCreate, AppointmentOut, AppointmentUpdate
 from app.api.v1.auth import get_current_user
+from app.services.analytics import calculate_doctor_avg
 
 router = APIRouter()
 
@@ -25,13 +25,18 @@ def book_appointment(
     if db_slot.status == "CLOSED":
         raise HTTPException(status_code=400, detail="Slot is closed")
 
+    # Fetch patient's base priority safely
+    patient_profile = db.query(PatientProfile).filter(PatientProfile.user_id == current_user["id"]).first()
+    base_priority = patient_profile.base_priority if patient_profile else 0
+
     queue_token = f"HC-{str(uuid_pkg.uuid4())[:8].upper()}"
 
     db_appointment = Appointment(
         patient_id=current_user["id"],
         slot_id=appointment.slot_id,
         queue_token=queue_token,
-        status="CONFIRMED"
+        status="CONFIRMED",
+        priority_score=base_priority
     )
     
     db.add(db_appointment)
@@ -76,8 +81,14 @@ def complete_consultation(appointment_id: UUID, db: Session = Depends(get_db)):
     
     if db_appointment.actual_start_time:
         duration = (db_appointment.actual_end_time - db_appointment.actual_start_time).total_seconds() / 60
-        db_appointment.consultation_duration = int(duration)
+        db_appointment.consultation_duration = max(1, int(duration)) # Minimum 1 minute
         
     db.commit()
     db.refresh(db_appointment)
+    
+    # Trigger Rolling Average calculation
+    db_slot = db_appointment.slot
+    if db_slot:
+        calculate_doctor_avg(db_slot.doctor_id, db)
+        
     return db_appointment
