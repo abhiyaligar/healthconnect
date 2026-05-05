@@ -192,12 +192,15 @@ Doctor Panel
 ├── Scheduling (Availability Templates)
 └── Fatigue Monitoring
 
-Admin/Reception Dashboard
+Admin Control Center
+├── Analytics (Main Landing)
+│   ├── KPI Strip
+│   ├── Hourly Volume
+│   └── Doctor Load
+├── Admin Panel (User Mgmt & Logs)
 ├── Queue Panel
 ├── Scheduling (Doctor Templates & Launch)
-├── Conflict Panel
-├── Analytics
-└── Admin Panel (User Mgmt)
+└── Conflict Panel
 ```
 
 ---

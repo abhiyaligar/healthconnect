@@ -40,6 +40,17 @@ Create a weekly availability template (Doctor/Staff only).
 Generate slots for a specific date based on templates.
 - **Body**: `doctor_id`, `date` (YYYY-MM-DD).
 
+## Analytics & Conflicts
+
+### `GET /api/v1/analytics/dashboard`
+Returns live reception stats: total bookings, queue length, available capacity, and active conflicts.
+
+### `GET /api/v1/analytics/conflicts/detailed`
+Returns a list of active scheduling conflicts with fairness-based priority scores and AI suggestions.
+
+### `GET /api/v1/analytics/admin/overview`
+Returns system-wide intelligence: KPIs, hourly booking trends, and doctor workload distribution (Admin only).
+
 ## Profiles
 - `GET /api/v1/doctors/`: List doctors with live performance averages.
 - `GET /api/v1/doctors/me`: Get logged-in doctor's profile.

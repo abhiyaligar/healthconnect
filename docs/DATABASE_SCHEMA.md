@@ -19,6 +19,8 @@ HealthConnect uses a Supabase-managed PostgreSQL database.
 - `status`: VARCHAR
 - `queue_token`: VARCHAR
 - `priority_score`: INTEGER
+- `reschedule_count`: INTEGER (Fairness tracking)
+- `wait_start_time`: TIMESTAMPTZ (Queue entry time)
 - **Clinical Tracking**:
     - `clinical_notes`: TEXT (Doctor's notes)
     - `diagnosis`: TEXT (Clinical diagnosis)
