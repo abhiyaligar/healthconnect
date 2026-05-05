@@ -104,7 +104,7 @@ async def login(user_data: UserAuth):
             raise HTTPException(status_code=401, detail="Invalid credentials")
         
         # Extract metadata
-        user_meta = response.user.user_metadata
+        user_meta = response.user.user_metadata or {}
         
         return TokenResponse(
             access_token=response.session.access_token,
@@ -117,13 +117,15 @@ async def login(user_data: UserAuth):
             )
         )
     except AuthApiError as e:
+        print(f"Auth Error: {str(e)}")
         raise HTTPException(status_code=401, detail="Invalid email or password")
     except Exception as e:
+        print(f"Login Error: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user = Depends(get_current_user)):
-    user_meta = current_user.user_metadata
+    user_meta = current_user.user_metadata or {}
     return UserResponse(
         id=current_user.id,
         email=current_user.email,

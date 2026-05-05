@@ -14,6 +14,17 @@ router = APIRouter()
 def list_doctors(db: Session = Depends(get_db)):
     return db.query(DoctorProfile).filter(DoctorProfile.status == "ACTIVE").all()
 
+@router.get("/me", response_model=DoctorProfileOut)
+def get_my_profile(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    user_id = uuid_pkg.UUID(str(current_user.id))
+    doctor = db.query(DoctorProfile).filter(DoctorProfile.user_id == user_id).first()
+    if not doctor:
+        raise HTTPException(status_code=404, detail="Doctor profile not found")
+    return doctor
+
 @router.get("/{doctor_id}", response_model=DoctorProfileOut)
 def get_doctor(doctor_id: str, db: Session = Depends(get_db)):
     doctor = db.query(DoctorProfile).filter(DoctorProfile.custom_id == doctor_id).first()
@@ -25,14 +36,13 @@ def get_doctor(doctor_id: str, db: Session = Depends(get_db)):
 def create_my_profile(
     profile: DoctorProfileCreate,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
-    user_id = uuid_pkg.UUID(str(current_user["id"]))
-    existing = db.query(DoctorProfile).filter(DoctorProfile.user_id == user_id).first()
+    existing = db.query(DoctorProfile).filter(DoctorProfile.user_id == uuid_pkg.UUID(str(current_user.id))).first()
     if existing:
         raise HTTPException(status_code=400, detail="Profile already exists")
     
-    db_profile = DoctorProfile(**profile.model_dump(), user_id=user_id)
+    db_profile = DoctorProfile(**profile.model_dump(), user_id=uuid_pkg.UUID(str(current_user.id)))
     db.add(db_profile)
     db.commit()
     db.refresh(db_profile)
@@ -42,10 +52,9 @@ def create_my_profile(
 def update_my_profile(
     profile: DoctorProfileUpdate,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
-    user_id = uuid_pkg.UUID(str(current_user["id"]))
-    db_profile = db.query(DoctorProfile).filter(DoctorProfile.user_id == user_id).first()
+    db_profile = db.query(DoctorProfile).filter(DoctorProfile.user_id == uuid_pkg.UUID(str(current_user.id))).first()
     if not db_profile:
         raise HTTPException(status_code=404, detail="Profile not found")
     

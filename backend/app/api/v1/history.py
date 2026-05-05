@@ -25,7 +25,7 @@ def get_patient_clinical_history(
     if not is_doctor:
         # Check if the custom_id belongs to the current user
         profile = db.query(PatientProfile).filter(PatientProfile.custom_id == patient_id).first()
-        if not profile or str(profile.user_id) != str(current_user["id"]):
+        if not profile or str(profile.user_id) != str(current_user.id):
             raise HTTPException(status_code=403, detail="Access denied")
 
     history = (
@@ -50,7 +50,7 @@ def get_patient_records(
     
     if not is_doctor:
         profile = db.query(PatientProfile).filter(PatientProfile.custom_id == patient_id).first()
-        if not profile or str(profile.user_id) != str(current_user["id"]):
+        if not profile or str(profile.user_id) != str(current_user.id):
             raise HTTPException(status_code=403, detail="Access denied")
 
     records = (

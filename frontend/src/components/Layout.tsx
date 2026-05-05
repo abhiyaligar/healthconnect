@@ -22,9 +22,11 @@ const navConfig: Record<Role, NavItem[]> = {
   ],
   doctor: [
     { name: 'My Schedule',     path: '/doctors',   icon: Stethoscope  },
+    { name: 'Scheduling',      path: '/scheduling',icon: CalendarDays },
   ],
   receptionist: [
     { name: 'Dashboard',       path: '/reception', icon: LayoutDashboard },
+    { name: 'Scheduling',      path: '/scheduling',icon: CalendarDays },
     { name: 'Queue',           path: '/queue',     icon: Users           },
     { name: 'Conflicts',       path: '/conflicts', icon: AlertTriangle   },
     { name: 'Analytics',       path: '/analytics', icon: BarChart2       },

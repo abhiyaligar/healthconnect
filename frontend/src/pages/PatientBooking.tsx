@@ -10,6 +10,7 @@ function cn(...inputs: ClassValue[]) {
 
 interface Doctor {
   id: string;
+  custom_id: string;
   user_id: string;
   full_name: string;
   specialty: string;
@@ -43,6 +44,7 @@ export default function PatientBooking() {
   const [patientDetails, setPatientDetails] = useState({ symptoms: '', severity: 'Moderate', history: '' });
   const [loading, setLoading] = useState(false);
   const [bookingResult, setBookingResult] = useState<any>(null);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     const fetchDoctors = async () => {
@@ -56,10 +58,10 @@ export default function PatientBooking() {
     fetchDoctors();
   }, []);
 
-  const fetchSlots = async (docId: string) => {
+  const fetchSlots = async (docId: string, date: string) => {
     try {
       setLoading(true);
-      const res = await api.get(`/slots/?doctor_id=${docId}`);
+      const res = await api.get(`/slots/?doctor_id=${docId}&date=${date}`);
       setSlots(res.data);
     } catch (err) {
       console.error('Failed to fetch slots');
@@ -75,8 +77,15 @@ export default function PatientBooking() {
 
   const handleDoctorSelect = (doc: Doctor) => {
     setSelectedDoctor(doc);
-    fetchSlots(doc.user_id);
+    fetchSlots(doc.custom_id, selectedDate);
     setStep(3);
+  };
+
+  const handleDateChange = (date: string) => {
+    setSelectedDate(date);
+    if (selectedDoctor) {
+      fetchSlots(selectedDoctor.custom_id, date);
+    }
   };
 
   const handleSlotSelect = (slot: Slot) => {
@@ -160,7 +169,7 @@ export default function PatientBooking() {
               <h2 className="text-2xl font-bold text-navy-900 mb-6">Available {selectedSpecialty} Specialists</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {doctors.filter(d => d.specialty === selectedSpecialty).map((doc) => (
-                  <div key={doc.id} className="p-6 rounded-xl border border-navy-100 flex flex-col justify-between">
+                  <div key={doc.custom_id} className="p-6 rounded-xl border border-navy-100 flex flex-col justify-between">
                     <div className="flex items-start gap-4 mb-6">
                       <div className="h-16 w-16 rounded-full bg-primary-100 flex items-center justify-center text-xl font-bold text-primary-700">
                         {doc.full_name.split(' ').map(n => n[0]).join('')}
@@ -182,11 +191,23 @@ export default function PatientBooking() {
           {step === 3 && selectedDoctor && (
             <div>
               <h2 className="text-2xl font-bold text-navy-900 mb-2">Select a Time Slot</h2>
-              <p className="text-navy-500 mb-6 flex items-center gap-2"><Calendar size={18} /> Available slots for {selectedDoctor.full_name}</p>
+              
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 p-4 bg-navy-50 rounded-xl border border-navy-100">
+                <p className="text-navy-500 flex items-center gap-2"><Calendar size={18} /> Available slots for {selectedDoctor.full_name}</p>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-bold text-navy-700 uppercase">Pick Date:</label>
+                  <input 
+                    type="date" 
+                    value={selectedDate}
+                    onChange={(e) => handleDateChange(e.target.value)}
+                    className="p-2 border border-navy-200 rounded-lg text-sm bg-white"
+                  />
+                </div>
+              </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {loading ? <div className="col-span-4 py-10 text-center">Fetching availability...</div> : 
-                 slots.length === 0 ? <div className="col-span-4 py-10 text-center text-navy-400">No open slots available today.</div> :
+                 slots.length === 0 ? <div className="col-span-4 py-10 text-center text-navy-400">No open slots available for this date.</div> :
                  slots.map((slot) => (
                   <button
                     key={slot.id}
@@ -197,7 +218,7 @@ export default function PatientBooking() {
                       slot.status === 'OPEN' ? "bg-white border-status-open/30 text-status-open hover:bg-status-open hover:text-white shadow-sm" : "bg-navy-50 text-navy-400 cursor-not-allowed"
                     )}
                   >
-                    <span className="font-bold">{new Date(slot.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    <span className="font-bold">{new Date(slot.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: true})}</span>
                     <span className="text-[10px] opacity-60">Max {slot.max_capacity} patients</span>
                   </button>
                 ))}
