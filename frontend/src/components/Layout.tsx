@@ -18,13 +18,16 @@ type NavItem = { name: string; path: string; icon: React.ElementType };
 
 const navConfig: Record<Role, NavItem[]> = {
   patient: [
+    { name: 'Dashboard',        path: '/dashboard', icon: LayoutDashboard },
     { name: 'Book Appointment', path: '/book',      icon: CalendarPlus },
   ],
   doctor: [
     { name: 'My Schedule',     path: '/doctors',   icon: Stethoscope  },
+    { name: 'Scheduling',      path: '/scheduling',icon: CalendarDays },
   ],
   receptionist: [
     { name: 'Dashboard',       path: '/reception', icon: LayoutDashboard },
+    { name: 'Scheduling',      path: '/scheduling',icon: CalendarDays },
     { name: 'Queue',           path: '/queue',     icon: Users           },
     { name: 'Conflicts',       path: '/conflicts', icon: AlertTriangle   },
     { name: 'Analytics',       path: '/analytics', icon: BarChart2       },

@@ -3,7 +3,7 @@ from sqlalchemy import desc
 from app.models import Appointment, DoctorProfile, Slot
 from uuid import UUID
 
-def calculate_doctor_avg(doctor_id: UUID, db: Session):
+def calculate_doctor_avg(doctor_id: str, db: Session):
     """
     Calculates the rolling average consultation time based on the last 10 
     COMPLETED appointments for a specific doctor.
@@ -26,7 +26,7 @@ def calculate_doctor_avg(doctor_id: UUID, db: Session):
     new_avg = int(total_duration / len(last_appointments))
     
     # Update doctor profile
-    doctor_profile = db.query(DoctorProfile).filter(DoctorProfile.user_id == doctor_id).first()
+    doctor_profile = db.query(DoctorProfile).filter(DoctorProfile.custom_id == doctor_id).first()
     if doctor_profile:
         doctor_profile.avg_consultation_time = new_avg
         db.commit()

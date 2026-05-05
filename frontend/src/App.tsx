@@ -10,6 +10,8 @@ import AdminDashboard from './pages/AdminDashboard';
 import QueuePanel from './pages/QueuePanel';
 import ConflictsPanel from './pages/ConflictsPanel';
 import AdminPanel from './pages/AdminPanel';
+import ScheduleManager from './pages/ScheduleManager';
+import PatientDashboard from './pages/PatientDashboard';
 
 function AppRoutes() {
   const { isLoggedIn, role } = useAuth();
@@ -35,6 +37,11 @@ function AppRoutes() {
               <Route path="reception" element={
                 <ProtectedRoute allowedRoles={['receptionist']}>
                   <ReceptionDashboard />
+                </ProtectedRoute>
+              } />
+               <Route path="dashboard" element={
+                <ProtectedRoute allowedRoles={['patient']}>
+                  <PatientDashboard />
                 </ProtectedRoute>
               } />
               <Route path="book" element={
@@ -65,6 +72,11 @@ function AppRoutes() {
               <Route path="admin" element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <AdminPanel />
+                </ProtectedRoute>
+              } />
+              <Route path="scheduling" element={
+                <ProtectedRoute allowedRoles={['doctor', 'receptionist']}>
+                  <ScheduleManager />
                 </ProtectedRoute>
               } />
               <Route path="*" element={<div className="p-8 text-navy-500">Page not found.</div>} />

@@ -2,6 +2,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
     PROJECT_NAME: str = "HealthConnect"
     SUPABASE_URL: str = ""
     SUPABASE_ANON_KEY: str = ""
@@ -13,9 +15,6 @@ class Settings(BaseSettings):
     SUPABASE_STORAGE_REGION: str = "ap-south-1"
     AWS_ACCESS_KEY_ID: str = ""
     AWS_SECRET_ACCESS_KEY: str = ""
-    
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
-
 
 @lru_cache()
 def get_settings():

@@ -9,7 +9,7 @@ class MedicalRecord(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     appointment_id = Column(UUID(as_uuid=True), ForeignKey("appointments.id"), nullable=True)
-    patient_id = Column(UUID(as_uuid=True), nullable=False)
+    patient_id = Column(String, ForeignKey("patient_profiles.custom_id"), nullable=False)
     doctor_id = Column(UUID(as_uuid=True), nullable=False)
     
     file_url = Column(String, nullable=False)
