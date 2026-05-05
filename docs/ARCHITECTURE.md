@@ -1,20 +1,29 @@
 # Architecture Overview
 
-HealthConnect is a data-driven scheduling engine.
+HealthConnect is a data-driven scheduling engine designed for high reliability and clinical precision.
 
-## Key Layers
+## Core Layers
 
-1.  **Identity Layer**: Manages roles and profiles.
-2.  **Tracking Layer**: Captures live performance data.
-3.  **Clinical Layer (New)**: Handles medical documentation, diagnoses, and secure file storage (via Supabase Storage).
-4.  **History Layer (New)**: Provides a consolidated view of patient interactions across multiple consultations.
+1.  **Identity Layer**: Manages roles (Doctor/Patient) and unified signup via Supabase Auth metadata.
+2.  **Intelligence Layer**: Tracks consultation speeds and calculates rolling averages to dynamically adjust slot durations.
+3.  **Clinical Layer**: Enables medical documentation, diagnosis tracking, and secure record storage.
+4.  **History Layer**: Provides a chronological clinical timeline for every patient.
 
-## Infrastructure
+## Infrastructure & Storage
 
-### Medical Storage
-Medical reports are stored in the **`medical-records`** Supabase bucket. Access is mediated through the Backend API to ensure that only authorized doctors and the specific patient can retrieve the file URLs.
+### Medical Record Storage
+- **System**: Supabase Storage (S3-Compatible)
+- **Region**: `ap-south-1`
+- **Bucket**: `records`
+- **Endpoint**: `https://[id].storage.supabase.co/storage/v1`
+- **Security**: Access keys (AWS_ACCESS_KEY_ID) are managed in the backend to provide pre-signed URL access or mediated file streaming, ensuring patients' privacy.
 
-### Data Model Logic
-- **Appointments** act as the central "event" record.
-- **MedicalRecords** are linked to appointments but can also exist as general patient files.
-- **Profiles** store the "State" (Avg duration, Priority).
+## Data Model
+
+```mermaid
+erDiagram
+    slots ||--o{ appointments : "blocks of time"
+    appointments ||--o{ medical_records : "linked reports"
+    doctor_profiles ||--o{ slots : "professional metrics"
+    patient_profiles ||--o{ appointments : "medical history"
+```
