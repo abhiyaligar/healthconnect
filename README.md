@@ -27,6 +27,9 @@ PROJECT_NAME=HealthConnect
 ### 3. Backend Installation
 
 ```powershell
+# Navigate to the backend directory
+cd backend
+
 # Create a virtual environment (if not already created)
 python -m venv venv
 
@@ -37,7 +40,7 @@ python -m venv venv
 source venv/bin/activate
 
 # Install dependencies
-pip install -r backend/requirements.txt
+pip install -r requirements.txt
 ```
 
 ### 4. Running the Backend
