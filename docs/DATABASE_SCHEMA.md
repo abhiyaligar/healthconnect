@@ -54,12 +54,21 @@ Stores links to files uploaded to Supabase Storage.
 - `gender`: VARCHAR
 - `base_priority`: INTEGER
 
+### `availability_templates`
+- `id`: UUID (PK)
+- `doctor_id`: String (FK to doctor_profiles.custom_id)
+- `day_of_week`: INTEGER (0=Mon, 6=Sun)
+- `start_time`: TIME
+- `end_time`: TIME
+- `is_active`: BOOLEAN
+
 ## Relationships
 
 ```mermaid
 erDiagram
+    doctor_profiles ||--o{ availability_templates : "defines weekly"
+    doctor_profiles ||--o{ slots : "launches"
     slots ||--o{ appointments : contains
     appointments ||--o{ medical_records : "has reports"
     patient_profiles ||--o{ appointments : books
-    doctor_profiles ||--o{ slots : manages
 ```

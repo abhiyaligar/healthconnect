@@ -258,6 +258,31 @@
 
 ---
 
+## Phase 10: Advanced Scheduling & Patient Experience
+
+### Step 10.1: Scheduling Engine (Completed)
+- **Tasks**:
+  - Implement weekly templates (AvailabilityTemplates)
+  - Build slot "Launch" logic to generate daily availability
+  - Fix timezone-aware generation conflicts
+- **Status**: ✅ Done
+
+### Step 10.2: Patient Experience (Completed)
+- **Tasks**:
+  - Personalized Patient Dashboard
+  - Upcoming/Past appointment tracking
+  - Calendar-based booking integration
+- **Status**: ✅ Done
+
+### Step 10.3: Stability & UX Polish (Completed)
+- **Tasks**:
+  - Automatic slot closing/opening
+  - Defensiveness in UI (null checks)
+  - Fixed UUID and Auth object conflicts
+- **Status**: ✅ Done
+
+---
+
 ## Final State After Completion
 
 You will have:

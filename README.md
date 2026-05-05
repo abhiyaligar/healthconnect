@@ -1,58 +1,47 @@
-# HealthConnect
+# MediSync: HealthConnect
+A professional healthcare appointment management system designed to handle overbooking and concurrent cancellation storms with fairness and efficiency.
 
-HealthConnect is a professional healthcare appointment management system designed to handle overbooking and concurrent cancellation storms with fairness and efficiency.
+## Key Features
+- **Smart Scheduling**: Doctors can set weekly templates and staff can launch slots for specific dates.
+- **Dynamic Patient Booking**: Real-time slot availability with calendar date selection.
+- **Queue Stabilization**: Handles "cancellation storms" by automatically re-opening slots and re-balancing the queue.
+- **Clinical Management**: Integrated clinical notes, medical record uploads, and consultation duration tracking.
+- **Multi-role Dashboards**: Dedicated views for Patients, Doctors, and Receptionists.
 
 ## Tech Stack
-- **Backend**: FastAPI
-- **Database/Auth**: Supabase (PostgreSQL)
-- **Migrations**: Alembic
+- **Frontend**: React, TypeScript, Vite, Tailwind CSS, Lucide Icons.
+- **Backend**: FastAPI (Python 3.12+).
+- **Database/Auth**: Supabase (PostgreSQL).
+- **Storage**: Supabase Storage for medical records.
 
 ## Getting Started
 
-### 1. Prerequisites
-- Python 3.9+
-- A Supabase Project
-
-### 2. Environment Setup
-Create a `.env` file in the root directory and populate it with your Supabase credentials:
+### 1. Environment Setup
+Create a `.env` file in the `backend/` directory:
 ```env
-SUPABASE_URL=your-project-url
-SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-DATABASE_URL=postgresql://postgres:[password]@db.[project-id].supabase.co:5432/postgres
-SECRET_KEY=your-jwt-secret
-PROJECT_NAME=HealthConnect
+SUPABASE_URL=...
+SUPABASE_ANON_KEY=...
+DATABASE_URL=...
+SECRET_KEY=...
 ```
 
-### 3. Backend Installation
-
+### 2. Backend Setup
 ```powershell
-# Navigate to the backend directory
 cd backend
-
-# Create a virtual environment (if not already created)
 python -m venv venv
-
-# Activate the virtual environment
-# Windows:
 .\venv\Scripts\Activate
-# Linux/macOS:
-source venv/bin/activate
-
-# Install dependencies
 pip install -r requirements.txt
-```
-
-### 4. Running the Backend
-
-```powershell
-cd backend
 uvicorn main:app --reload
 ```
-The API will be available at `http://localhost:8000`.
-Visit `http://localhost:8000/docs` for the interactive Swagger documentation.
+
+### 3. Frontend Setup
+```powershell
+cd frontend
+npm install
+npm run dev
+```
 
 ## Project Structure
-- `backend/`: FastAPI application code.
-- `alembic/`: Database migration scripts.
-- `requirements.txt`: Python dependencies.
+- `backend/`: FastAPI application code and API routes.
+- `frontend/`: React application with Tailwind CSS and TypeScript.
+- `docs/`: Comprehensive technical and architectural documentation.

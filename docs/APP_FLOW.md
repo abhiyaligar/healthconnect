@@ -179,47 +179,45 @@ Dashboard (Reception)
 ├── Alerts
 
 Patient App
+├── Patient Dashboard (Home)
+│   ├── Upcoming Appointment
+│   └── Medical History
 ├── Specialty Selection
 ├── Doctor Selection
-├── Slot Selection
-├── Confirmation
+├── Slot Selection (with Date Picker)
+└── Confirmation
 
 Doctor Panel
-├── Schedule
-├── Fatigue Report
-├── Availability
+├── My Schedule (Consultations)
+├── Scheduling (Availability Templates)
+└── Fatigue Monitoring
 
-Admin Dashboard
+Admin/Reception Dashboard
+├── Queue Panel
+├── Scheduling (Doctor Templates & Launch)
+├── Conflict Panel
 ├── Analytics
-├── Reports
+└── Admin Panel (User Mgmt)
 ```
 
 ---
 
 ## 4. Screen Inventory
 
-### Screen: Reception Dashboard
-- **Route**: `/reception`
-- **Access**: Authenticated (Receptionist)
-- **Purpose**: Queue + conflict management
-- **Key Elements**: Queue list, Conflict panel, Doctor status
-- **States**: Live, Loading, Error (connection lost)
+### Screen: Patient Dashboard
+- **Route**: `/dashboard`
+- **Access**: Authenticated (Patient)
+- **Purpose**: Overview of upcoming and past appointments.
 
 ### Screen: Patient Booking
 - **Route**: `/book`
-- **Access**: Public
-- **Purpose**: Appointment booking
-- **States**: Slot available, Overbooked, Full
+- **Access**: Authenticated (Patient/Admin)
+- **Purpose**: New appointment booking flow with calendar integration.
 
-### Screen: Doctor Dashboard
-- **Route**: `/doctor`
-- **Access**: Authenticated (Doctor)
-- **Purpose**: Schedule + fatigue
-
-### Screen: Admin Dashboard
-- **Route**: `/admin`
-- **Access**: Admin
-- **Purpose**: Analytics
+### Screen: Scheduling Manager
+- **Route**: `/scheduling`
+- **Access**: Authenticated (Doctor/Receptionist)
+- **Purpose**: Manage weekly templates and launch daily slots.
 
 ---
 

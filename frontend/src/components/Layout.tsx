@@ -18,6 +18,7 @@ type NavItem = { name: string; path: string; icon: React.ElementType };
 
 const navConfig: Record<Role, NavItem[]> = {
   patient: [
+    { name: 'Dashboard',        path: '/dashboard', icon: LayoutDashboard },
     { name: 'Book Appointment', path: '/book',      icon: CalendarPlus },
   ],
   doctor: [

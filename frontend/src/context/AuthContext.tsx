@@ -51,7 +51,7 @@ export function useAuth() {
 
 export function roleHomePath(role: Role): string {
   switch (role) {
-    case 'patient':       return '/book';
+    case 'patient':       return '/dashboard';
     case 'doctor':        return '/doctors';
     case 'receptionist':  return '/reception';
     case 'admin':         return '/admin';

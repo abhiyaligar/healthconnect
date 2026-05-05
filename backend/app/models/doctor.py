@@ -1,5 +1,6 @@
 from sqlalchemy import Column, String, Integer, Float, Text
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 import uuid
 from app.models.base import Base
 
@@ -15,3 +16,5 @@ class DoctorProfile(Base):
     avg_consultation_time = Column(Integer, default=20)
     manual_speed_factor = Column(Float, default=1.0)
     status = Column(String, default="ACTIVE") # ACTIVE, INACTIVE, ON_BREAK
+    
+    slots = relationship("Slot", back_populates="doctor")
