@@ -28,7 +28,15 @@ def book_appointment(
     if db_slot.status == "CLOSED":
         raise HTTPException(status_code=400, detail="Slot is closed")
 
-    patient_profile = db.query(PatientProfile).filter(PatientProfile.user_id == user_id).first()
+    # If receptionist/admin is booking for a patient
+    role = current_user.user_metadata.get("role", "").lower()
+    if appointment.patient_id and role in ["receptionist", "admin"]:
+        patient_profile = db.query(PatientProfile).filter(PatientProfile.custom_id == appointment.patient_id).first()
+    else:
+        # Default: Patient booking for themselves
+        user_id = uuid_pkg.UUID(str(current_user.id))
+        patient_profile = db.query(PatientProfile).filter(PatientProfile.user_id == user_id).first()
+
     if not patient_profile:
         raise HTTPException(status_code=404, detail="Patient profile not found")
         
@@ -42,7 +50,8 @@ def book_appointment(
         slot_id=appointment.slot_id,
         queue_token=queue_token,
         status="CONFIRMED",
-        priority_score=base_priority
+        priority_score=base_priority,
+        wait_start_time=datetime.now(timezone.utc)
     )
     
     # Close the slot once booked (since capacity is 1)

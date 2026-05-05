@@ -15,12 +15,15 @@ class SignupRequest(UserAuth):
     full_name: str
     mobile: str
     role: UserRole
+    dob: Optional[str] = None
+    gender: Optional[str] = None
 
 class UserResponse(BaseModel):
     id: str
     email: str
     full_name: Optional[str] = None
     role: Optional[UserRole] = None
+    custom_id: Optional[str] = None
 
 class TokenResponse(BaseModel):
     access_token: str

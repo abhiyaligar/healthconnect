@@ -14,6 +14,8 @@ class Appointment(Base):
     status = Column(String, default="PENDING")  # PENDING, CONFIRMED, BUMPED, CANCELLED, IN_PROGRESS, COMPLETED
     queue_token = Column(String, unique=True, nullable=True)
     priority_score = Column(Integer, default=0)
+    reschedule_count = Column(Integer, default=0) # Track fairness
+    wait_start_time = Column(DateTime(timezone=True), nullable=True) # For score calc
     
     # Tracking fields for real-time analytics
     actual_start_time = Column(DateTime(timezone=True), nullable=True)

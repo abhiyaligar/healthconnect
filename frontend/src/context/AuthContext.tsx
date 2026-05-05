@@ -26,7 +26,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   const login = useCallback((role: Role, name: string, token: string, userId: string) => {
-    const newState = { isLoggedIn: true, role, name, token, userId };
+    const normalizedRole = (role as string).toLowerCase() as Role;
+    const newState = { isLoggedIn: true, role: normalizedRole, name, token, userId };
     setAuth(newState);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
   }, []);
@@ -54,7 +55,7 @@ export function roleHomePath(role: Role): string {
     case 'patient':       return '/dashboard';
     case 'doctor':        return '/doctors';
     case 'receptionist':  return '/reception';
-    case 'admin':         return '/admin';
+    case 'admin':         return '/analytics';
     default:              return '/';
   }
 }

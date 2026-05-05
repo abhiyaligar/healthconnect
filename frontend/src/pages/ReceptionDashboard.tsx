@@ -1,4 +1,4 @@
-import { Zap, Activity, Info, Clock, AlertTriangle } from 'lucide-react';
+import { Zap, Activity, Info, Clock, AlertTriangle, Users, UserPlus, Calendar, CheckCircle2, ArrowRight } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -6,7 +6,33 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import api from '../api';
+
 export default function ReceptionDashboard() {
+  const navigate = useNavigate();
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await api.get('/analytics/dashboard');
+        setStats(res.data);
+      } catch (err) {
+        console.error('Failed to fetch dashboard stats');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+    const interval = setInterval(fetchStats, 30000); // Update every 30s
+    return () => clearInterval(interval);
+  }, []);
+
+  if (loading || !stats) return <div className="p-20 text-center text-navy-400">Initializing Live Dashboard...</div>;
+
   return (
     <div className="grid grid-cols-12 gap-6">
       
@@ -15,24 +41,24 @@ export default function ReceptionDashboard() {
         <h3 className="text-lg font-bold text-navy-800 uppercase tracking-wider text-xs">Live Queue Status</h3>
         <p className="text-sm text-navy-500 mt-1">Total patients in queue today</p>
         <div className="mt-8">
-          <span className="text-[64px] font-black tracking-tighter leading-none text-primary-700">142</span>
+          <span className="text-[64px] font-black tracking-tighter leading-none text-primary-700">{stats.queue.total}</span>
         </div>
         
         <div className="mt-8 space-y-4">
           <div className="flex h-3 rounded-full overflow-hidden bg-navy-50">
-            <div className="bg-primary-600 w-[65%]"></div>
-            <div className="bg-tertiary-400 w-[20%]"></div>
-            <div className="bg-status-error w-[15%]"></div>
+            <div className="bg-primary-600" style={{ width: `${(stats.queue.routine / stats.queue.total * 100) || 0}%` }}></div>
+            <div className="bg-tertiary-400" style={{ width: `${(stats.queue.elevated / stats.queue.total * 100) || 0}%` }}></div>
+            <div className="bg-status-error" style={{ width: `${(stats.queue.emergency / stats.queue.total * 100) || 0}%` }}></div>
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-2 text-[10px] font-bold text-navy-400 uppercase">
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-primary-600"></div> Routine (92)</div>
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-tertiary-400"></div> Elevated (28)</div>
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-status-error"></div> Emergency (22)</div>
+            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-primary-600"></div> Routine ({stats.queue.routine})</div>
+            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-tertiary-400"></div> Elevated ({stats.queue.elevated})</div>
+            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-status-error"></div> Emergency ({stats.queue.emergency})</div>
           </div>
         </div>
       </div>
 
-      {/* Card 2: 6.6 System Health Widget (Premium Gauge) */}
+      {/* Card 2: System Health Gauge */}
       <div className="col-span-12 md:col-span-4 bg-surface rounded-[24px] p-8 shadow-skyline border border-navy-100 flex flex-col items-center text-center overflow-hidden relative">
         <div className="absolute top-0 right-0 p-4">
           <Info size={16} className="text-navy-300 hover:text-navy-600 cursor-help" />
@@ -43,63 +69,70 @@ export default function ReceptionDashboard() {
         <div className="relative w-48 h-48 flex items-center justify-center">
           <svg className="w-full h-full transform -rotate-90">
             <circle cx="96" cy="96" r="80" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-navy-50" />
-            <circle cx="96" cy="96" r="80" stroke="currentColor" strokeWidth="12" fill="transparent" strokeDasharray={502} strokeDashoffset={502 * (1 - 0.84)} strokeLinecap="round" className="text-primary-600 transition-all duration-1000 ease-out" />
+            <circle cx="96" cy="96" r="80" stroke="currentColor" strokeWidth="12" fill="transparent" strokeDasharray={502} strokeDashoffset={502 * (1 - stats.system_health / 100)} strokeLinecap="round" className="text-primary-600 transition-all duration-1000 ease-out" />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center pt-2">
-            <span className="text-4xl font-black text-navy-900 leading-none">84<span className="text-xl">%</span></span>
-            <span className="text-[10px] font-bold text-status-open mt-1 tracking-widest uppercase">Stable</span>
+            <span className="text-4xl font-black text-navy-900 leading-none">{stats.system_health}<span className="text-xl">%</span></span>
+            <span className="text-[10px] font-bold text-status-open mt-1 tracking-widest uppercase">
+              {stats.system_health > 90 ? 'Stable' : 'Surged'}
+            </span>
           </div>
         </div>
 
         <div className="mt-6 w-full space-y-3">
           <div className="flex items-center justify-between p-3 bg-navy-50 rounded-xl">
             <div className="flex items-center gap-2 text-xs font-bold text-navy-600">
-              <Zap size={14} className="text-status-warning" /> Slot Overlap Risk
+              <Zap size={14} className="text-status-warning" /> Conflict Risk
             </div>
-            <span className="text-sm font-black text-navy-900">Low (12%)</span>
+            <span className="text-sm font-black text-navy-900">{stats.queue.emergency > 0 ? 'Medium' : 'Low'}</span>
           </div>
           <div className="flex items-center justify-between p-3 bg-navy-50 rounded-xl">
             <div className="flex items-center gap-2 text-xs font-bold text-navy-600">
-              <Activity size={14} className="text-primary-500" /> Resolution Accuracy
+              <Activity size={14} className="text-primary-500" /> Live Patients
             </div>
-            <span className="text-sm font-black text-navy-900">98.2%</span>
+            <span className="text-sm font-black text-navy-900">{stats.queue.total} Active</span>
           </div>
         </div>
       </div>
 
-      {/* Card 3: Upcoming Schedule */}
+      {/* Card 3: Upcoming Conflict Risk */}
       <div className="col-span-12 md:col-span-4 bg-surface rounded-[24px] p-8 shadow-skyline border border-navy-100">
-        <h3 className="text-lg font-bold text-navy-800 uppercase tracking-wider text-xs mb-8">Upcoming Conflict Risk</h3>
+        <h3 className="text-lg font-bold text-navy-800 uppercase tracking-wider text-xs mb-8">System Conflicts</h3>
         <div className="space-y-4">
-          {[
-            { doctor: "Dr. Aris", time: "12:30 PM", risk: "high", reason: "3 overlap surge" },
-            { doctor: "Dr. Miller", time: "01:15 PM", risk: "medium", reason: "Fatigue warning" },
-            { doctor: "Dr. Jones", time: "02:00 PM", risk: "low", reason: "Optimal load" },
-          ].map((apt, i) => (
-            <div key={i} className="flex items-center gap-4 p-4 bg-navy-50 rounded-2xl hover:shadow-sm transition-all border border-transparent hover:border-navy-200 group">
-              <div className={cn(
-                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                apt.risk === 'high' ? 'bg-status-error/10 text-status-error' :
-                apt.risk === 'medium' ? 'bg-status-warning/10 text-status-warning' : 'bg-status-open/10 text-status-open'
-              )}>
-                {apt.risk === 'high' ? <AlertTriangle size={18} /> : <Clock size={18} />}
-              </div>
-              <div className="flex-1">
-                <p className="font-bold text-navy-900 text-sm">{apt.doctor} · {apt.time}</p>
-                <p className="text-[10px] text-navy-400 font-bold uppercase tracking-wider mt-0.5">{apt.reason}</p>
-              </div>
-              <ChevronRight size={16} className="text-navy-300 group-hover:text-navy-600" />
+          {stats.conflicts.length === 0 ? (
+            <div className="py-8 text-center">
+              <CheckCircle2 size={32} className="mx-auto text-status-open mb-4" />
+              <p className="text-xs font-bold text-navy-400 uppercase tracking-widest">No Active Conflicts</p>
             </div>
-          ))}
+          ) : (
+            stats.conflicts.map((c: any, i: number) => (
+              <div 
+                key={i} 
+                onClick={() => navigate('/reception/conflicts')}
+                className="flex items-center gap-4 p-4 bg-navy-50 rounded-2xl border border-transparent hover:border-navy-200 group transition-all cursor-pointer"
+              >
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${c.risk === 'high' ? 'bg-status-error/10 text-status-error' : 'bg-status-warning/10 text-status-warning'}`}>
+                  {c.risk === 'high' ? <AlertTriangle size={18} /> : <Clock size={18} />}
+                </div>
+                <div className="flex-1">
+                  <p className="font-bold text-navy-900 text-sm">{c.doctor} · {c.time}</p>
+                  <p className="text-[10px] text-navy-400 font-bold uppercase tracking-wider mt-0.5">{c.reason}</p>
+                </div>
+                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-navy-300 group-hover:text-primary-600 transition-colors shadow-sm">
+                  <ArrowRight size={14} />
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
       {/* Card 4: Avg Wait Time */}
       <div className="col-span-12 md:col-span-3 bg-surface rounded-[24px] p-8 shadow-skyline border border-navy-100">
-        <h3 className="text-xs font-bold text-navy-400 uppercase tracking-widest mb-4">Avg Wait Time</h3>
+        <h3 className="text-xs font-bold text-navy-400 uppercase tracking-widest mb-4">Avg Est. Wait</h3>
         <div className="flex items-baseline gap-2">
-          <span className="text-[48px] font-black tracking-tighter text-navy-900 leading-none">18<span className="text-2xl">m</span></span>
-          <span className="text-xs font-bold text-status-open">+12% surge</span>
+          <span className="text-[48px] font-black tracking-tighter text-navy-900 leading-none">{stats.avg_wait_time}<span className="text-2xl">m</span></span>
+          <span className="text-xs font-bold text-status-open">Live</span>
         </div>
         <div className="mt-6 h-12 flex items-end gap-1">
           {[40, 60, 35, 90, 55, 70, 45, 80].map((h, i) => (
@@ -108,18 +141,18 @@ export default function ReceptionDashboard() {
         </div>
       </div>
 
-      {/* Card 5: Auto-Resolution Rate */}
+      {/* Card 5: Self-Stabilization */}
       <div className="col-span-12 md:col-span-3 bg-surface rounded-[24px] p-8 shadow-skyline border border-navy-100">
-        <h3 className="text-xs font-bold text-navy-400 uppercase tracking-widest mb-4">Self-Stabilization</h3>
+        <h3 className="text-xs font-bold text-navy-400 uppercase tracking-widest mb-4">Slot Efficiency</h3>
         <div className="flex items-baseline gap-2">
-          <span className="text-[48px] font-black tracking-tighter text-navy-900 leading-none">94<span className="text-2xl">%</span></span>
+          <span className="text-[48px] font-black tracking-tighter text-navy-900 leading-none">98<span className="text-2xl">%</span></span>
         </div>
         <div className="mt-4 flex items-center gap-2 text-xs font-bold text-navy-500">
-          <Zap size={14} className="text-status-open fill-status-open" /> 18 conflicts auto-fixed
+          <Zap size={14} className="text-status-open fill-status-open" /> Optimized Load
         </div>
         <div className="mt-6 bg-navy-50 p-3 rounded-xl">
-            <p className="text-[10px] text-navy-400 font-bold">LATEST RESOLUTION</p>
-            <p className="text-xs font-bold text-navy-700 mt-1">11:04 AM · Slot Re-balanced</p>
+            <p className="text-[10px] text-navy-400 font-bold">LATEST STATUS</p>
+            <p className="text-xs font-bold text-navy-700 mt-1">Steady State flow</p>
         </div>
       </div>
 
@@ -133,15 +166,14 @@ export default function ReceptionDashboard() {
             </div>
         </div>
         <div className="space-y-6">
-            {['Dr. Smith', 'Dr. Lee', 'Dr. Miller'].map((d, i) => (
-                <div key={d} className="space-y-2">
+            {stats.workload.map((d: any) => (
+                <div key={d.name} className="space-y-2">
                     <div className="flex justify-between text-xs font-bold text-navy-700">
-                        <span>{d}</span>
-                        <span>{75 + i*5}% Capacity</span>
+                        <span>{d.name}</span>
+                        <span>{d.capacity}% Capacity ({d.current}/{d.total})</span>
                     </div>
                     <div className="h-6 flex gap-1 items-center">
-                        <div className="h-full bg-primary-500 rounded-lg shadow-sm" style={{ width: `${60 - i*10}%` }} />
-                        <div className="h-full bg-navy-100 rounded-lg" style={{ width: `${20 + i*10}%` }} />
+                        <div className="h-full bg-primary-500 rounded-lg shadow-sm transition-all duration-1000" style={{ width: `${d.capacity}%` }} />
                         <div className="flex-1 h-px bg-navy-100 border-t border-dashed" />
                     </div>
                 </div>
@@ -149,9 +181,39 @@ export default function ReceptionDashboard() {
         </div>
       </div>
 
+      {/* Card 7: Quick Actions */}
+      <div className="col-span-12 md:col-span-6 bg-primary-900 rounded-[24px] p-8 shadow-xl text-white relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-8 opacity-10">
+          <Users size={64} />
+        </div>
+        <h3 className="text-xs font-bold text-primary-400 uppercase tracking-[0.2em] mb-8">Reception Quick Actions</h3>
+        
+        <div className="grid grid-cols-2 gap-4 relative">
+          <button 
+            onClick={() => window.location.href = '/reception/walkin'}
+            className="flex flex-col items-start p-6 bg-white/10 hover:bg-white/20 rounded-2xl border border-white/10 transition-all group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-primary-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <UserPlus size={20} className="text-white" />
+            </div>
+            <p className="font-bold text-white">Register Walk-in</p>
+            <p className="text-[10px] text-primary-300 font-bold uppercase mt-1">New Patient Account</p>
+          </button>
+
+          <button className="flex flex-col items-start p-6 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition-all group opacity-50 cursor-not-allowed">
+            <div className="w-10 h-10 rounded-xl bg-navy-700 flex items-center justify-center mb-4">
+              <Calendar size={20} className="text-white" />
+            </div>
+            <p className="font-bold text-white">Emergency Bump</p>
+            <p className="text-[10px] text-navy-400 font-bold uppercase mt-1">Priority Override</p>
+          </button>
+        </div>
+      </div>
+
     </div>
   );
 }
+
 
 function ChevronRight(props: any) {
   return (

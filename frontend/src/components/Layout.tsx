@@ -30,15 +30,13 @@ const navConfig: Record<Role, NavItem[]> = {
     { name: 'Scheduling',      path: '/scheduling',icon: CalendarDays },
     { name: 'Queue',           path: '/queue',     icon: Users           },
     { name: 'Conflicts',       path: '/conflicts', icon: AlertTriangle   },
-    { name: 'Analytics',       path: '/analytics', icon: BarChart2       },
   ],
   admin: [
-    { name: 'Dashboard',       path: '/reception', icon: LayoutDashboard },
+    { name: 'Dashboard',       path: '/analytics', icon: LayoutDashboard },
     { name: 'Book Appointment',path: '/book',      icon: CalendarPlus    },
     { name: 'Queue',           path: '/queue',     icon: Users           },
     { name: 'Conflicts',       path: '/conflicts', icon: AlertTriangle   },
     { name: 'Doctors',         path: '/doctors',   icon: CalendarDays    },
-    { name: 'Analytics',       path: '/analytics', icon: BarChart2       },
     { name: 'Admin Panel',     path: '/admin',     icon: ShieldCheck     },
   ],
 };

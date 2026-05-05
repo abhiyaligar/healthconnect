@@ -12,6 +12,8 @@ import ConflictsPanel from './pages/ConflictsPanel';
 import AdminPanel from './pages/AdminPanel';
 import ScheduleManager from './pages/ScheduleManager';
 import PatientDashboard from './pages/PatientDashboard';
+import WalkinRegistration from './pages/WalkinRegistration';
+import ConflictResolution from './pages/ConflictResolution';
 
 function AppRoutes() {
   const { isLoggedIn, role } = useAuth();
@@ -37,6 +39,16 @@ function AppRoutes() {
               <Route path="reception" element={
                 <ProtectedRoute allowedRoles={['receptionist']}>
                   <ReceptionDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="reception/walkin" element={
+                <ProtectedRoute allowedRoles={['receptionist']}>
+                  <WalkinRegistration />
+                </ProtectedRoute>
+              } />
+              <Route path="reception/conflicts" element={
+                <ProtectedRoute allowedRoles={['receptionist']}>
+                  <ConflictResolution />
                 </ProtectedRoute>
               } />
                <Route path="dashboard" element={
@@ -65,7 +77,7 @@ function AppRoutes() {
                 </ProtectedRoute>
               } />
               <Route path="analytics" element={
-                <ProtectedRoute allowedRoles={['receptionist']}>
+                <ProtectedRoute allowedRoles={['admin']}>
                   <AdminDashboard />
                 </ProtectedRoute>
               } />

@@ -12,6 +12,7 @@ class AppointmentBase(BaseModel):
 class AppointmentCreate(BaseModel):
     slot_id: UUID
     reason: Optional[str] = None
+    patient_id: Optional[str] = None # For admin/receptionist booking
 
 class AppointmentUpdate(BaseModel):
     status: Optional[str] = None

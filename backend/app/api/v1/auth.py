@@ -73,7 +73,9 @@ async def signup(user_data: SignupRequest, db: Session = Depends(get_db)):
                 full_name=user_data.full_name,
                 mobile=user_data.mobile,
                 custom_id=custom_id,
-                base_priority=0
+                base_priority=0,
+                date_of_birth=user_data.dob if user_data.dob else None,
+                gender=user_data.gender
             )
         
         db.add(db_profile)
@@ -83,7 +85,8 @@ async def signup(user_data: SignupRequest, db: Session = Depends(get_db)):
             id=response.user.id,
             email=response.user.email,
             full_name=user_data.full_name,
-            role=user_data.role
+            role=user_data.role,
+            custom_id=custom_id
         )
     except AuthApiError as e:
         raise HTTPException(status_code=400, detail=str(e))
