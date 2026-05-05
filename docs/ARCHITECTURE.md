@@ -1,23 +1,20 @@
 # Architecture Overview
 
-HealthConnect is built on a **Learning Scheduler** architecture, which minimizes overbooking by adapting to real-world consultation speeds.
+HealthConnect is a data-driven scheduling engine.
 
-## Core Layers
+## Key Layers
 
-1.  **Identity & Profile Layer**: Manages the persistent data for Doctors and Patients, including historical performance metrics and priority flags.
-2.  **Tracking & Analytics Layer**: Captures real-time consultation durations and calculates a **Rolling Average (last 10)** to feed into the scheduler.
-3.  **The Stabilizer (Phase 2)**: Resolves overbooked slots by adjusting future appointments based on the doctor's current pace.
+1.  **Identity Layer**: Manages roles and profiles.
+2.  **Tracking Layer**: Captures live performance data.
+3.  **Clinical Layer (New)**: Handles medical documentation, diagnoses, and secure file storage (via Supabase Storage).
+4.  **History Layer (New)**: Provides a consolidated view of patient interactions across multiple consultations.
 
-## Data Flow (Intelligence)
+## Infrastructure
 
-1.  **Event**: Doctor clicks "Complete Consultation".
-2.  **Capture**: System records `actual_end_time` and calculates `duration`.
-3.  **Analyze**: `AnalyticsService` fetches the last 10 records and updates `DoctorProfile.avg_consultation_time`.
-4.  **Feedback**: Future bookings for this doctor use the updated average for more accurate slot sizing.
+### Medical Storage
+Medical reports are stored in the **`medical-records`** Supabase bucket. Access is mediated through the Backend API to ensure that only authorized doctors and the specific patient can retrieve the file URLs.
 
-## Tech Stack
-- **Backend**: FastAPI (Python)
-- **Database**: PostgreSQL (Supabase)
-- **ORM**: SQLAlchemy 2.0
-- **Migrations**: Alembic
-- **Real-time**: Supabase Realtime (Planned)
+### Data Model Logic
+- **Appointments** act as the central "event" record.
+- **MedicalRecords** are linked to appointments but can also exist as general patient files.
+- **Profiles** store the "State" (Avg duration, Priority).

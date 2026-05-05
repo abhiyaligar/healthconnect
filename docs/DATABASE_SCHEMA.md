@@ -1,56 +1,65 @@
 # Database Schema
 
-HealthConnect uses a Supabase-managed PostgreSQL database. The schema is designed for high-concurrency scheduling and real-time performance tracking.
+HealthConnect uses a Supabase-managed PostgreSQL database.
 
 ## Tables
 
 ### `slots`
-Defines blocks of time where a doctor is available.
 - `id`: UUID (PK)
-- `doctor_id`: UUID (Links to Supabase Auth user)
+- `doctor_id`: UUID
 - `start_time`: TIMESTAMPTZ
 - `end_time`: TIMESTAMPTZ
-- `status`: VARCHAR (OPEN, CLOSED, OVERBOOKED)
-- `max_capacity`: INTEGER (Default 1)
+- `status`: VARCHAR
+- `max_capacity`: INTEGER
 
 ### `appointments`
-Defines patient bookings within a slot.
 - `id`: UUID (PK)
-- `patient_id`: UUID (Links to Supabase Auth user)
-- `slot_id`: UUID (FK -> slots.id)
-- `status`: VARCHAR (CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED)
-- `queue_token`: VARCHAR (Unique, e.g., HC-A1B2)
-- `priority_score`: INTEGER (Calculated from Patient Profile)
-- **Tracking Fields**:
+- `patient_id`: UUID
+- `slot_id`: UUID (FK)
+- `status`: VARCHAR
+- `queue_token`: VARCHAR
+- `priority_score`: INTEGER
+- **Clinical Tracking**:
+    - `clinical_notes`: TEXT (Doctor's notes)
+    - `diagnosis`: TEXT (Clinical diagnosis)
     - `actual_start_time`: TIMESTAMPTZ
     - `actual_end_time`: TIMESTAMPTZ
-    - `consultation_duration`: INTEGER (Minutes)
+    - `consultation_duration`: INTEGER
+
+### `medical_records`
+Stores links to files uploaded to Supabase Storage.
+- `id`: UUID (PK)
+- `appointment_id`: UUID (FK, Optional)
+- `patient_id`: UUID (FK)
+- `doctor_id`: UUID (FK)
+- `file_url`: VARCHAR (Supabase Storage URL)
+- `file_type`: VARCHAR (e.g., LAB_REPORT, PRESCRIPTION)
+- `description`: VARCHAR
+- `created_at`: TIMESTAMPTZ
 
 ### `doctor_profiles`
-Professional identity and scheduling intelligence for doctors.
 - `id`: UUID (PK)
-- `user_id`: UUID (Unique, Auth Link)
+- `user_id`: UUID
 - `full_name`: VARCHAR
 - `specialty`: VARCHAR
 - `bio`: TEXT
-- `avg_consultation_time`: INTEGER (Calculated Rolling Average)
-- `manual_speed_factor`: FLOAT (Override for scheduler speed)
-- `status`: VARCHAR (ACTIVE, IN_ACTIVE)
+- `avg_consultation_time`: INTEGER
+- `manual_speed_factor`: FLOAT
 
 ### `patient_profiles`
-Medical identity and priority settings for patients.
 - `id`: UUID (PK)
-- `user_id`: UUID (Unique, Auth Link)
+- `user_id`: UUID
+- `full_name`: VARCHAR
 - `date_of_birth`: DATE
 - `gender`: VARCHAR
-- `base_priority`: INTEGER (Contributes to appointment priority)
-- `medical_history`: TEXT
+- `base_priority`: INTEGER
 
-## Entity Relationship Diagram
+## Relationships
 
 ```mermaid
 erDiagram
     slots ||--o{ appointments : contains
-    doctor_profiles ||--o{ slots : manages
+    appointments ||--o{ medical_records : "has reports"
     patient_profiles ||--o{ appointments : books
+    doctor_profiles ||--o{ slots : manages
 ```

@@ -1,31 +1,31 @@
 # API Reference
 
 ## Authentication
-Supabase Auth is used. Pass the access token in the `Authorization: Bearer <token>` header.
 
-## Scheduling
+### `POST /api/v1/auth/signup`
+Creates a new user and initializes their profile.
+- **Body**: `email`, `password`, `full_name`, `role` (DOCTOR/PATIENT).
 
-### Slots
-- `GET /api/v1/slots/`: List available slots.
-- `POST /api/v1/slots/`: Create a new slot (Doctor only).
+## Appointments & Clinical
 
-### Appointments
-- `POST /api/v1/appointments/`: Book an appointment (inherits Patient priority).
-- `GET /api/v1/appointments/me`: List current user's appointments.
-- `PATCH /api/v1/appointments/{id}/call`: Mark as IN_PROGRESS (starts timer).
-- `PATCH /api/v1/appointments/{id}/complete`: Mark as COMPLETED (calculates duration and triggers doctor speed update).
+### Consultation Management
+- `PATCH /api/v1/appointments/{id}/call`: Start session.
+- `PATCH /api/v1/appointments/{id}/clinical-notes`: Update diagnosis and notes (Doctor only).
+- `PATCH /api/v1/appointments/{id}/complete`: End session and update analytics.
+
+### Medical Records
+- `POST /api/v1/appointments/{id}/records`: Upload a medical report/file (Multi-part form).
+    - Fields: `file` (File), `file_type` (String), `description` (String).
+
+## History & Records
+
+### `GET /api/v1/history/{patient_id}`
+Returns a chronological list of all **completed** appointments and their notes.
+- **Access**: Assigned Doctor or the Patient themselves.
+
+### `GET /api/v1/history/{patient_id}/records`
+Returns a list of all medical records/files ever uploaded for this patient.
 
 ## Profiles
-
-### Doctors
-- `GET /api/v1/doctors/`: List active doctors with their **Live Average Time**.
-- `GET /api/v1/doctors/{id}`: Detailed doctor profile.
-- `PATCH /api/v1/doctors/me`: Update professional details and **Manual Speed Factor**.
-
-### Patients
-- `GET /api/v1/patients/me`: Get current user's medical profile.
-- `POST /api/v1/patients/me`: Initialize profile.
-- `PATCH /api/v1/patients/me`: Update medical history and basic details.
-
-## Analytics
-- **Rolling Average**: The system automatically recalculates the `avg_consultation_time` for a doctor after every **10** completed consultations.
+- `GET /api/v1/doctors/`: List doctors with live performance averages.
+- `GET /api/v1/patients/me`: Get patient's medical profile.

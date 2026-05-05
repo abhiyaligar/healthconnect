@@ -7,6 +7,7 @@ from app.api.v1.slots import router as slots_router
 from app.api.v1.appointments import router as appointments_router
 from app.api.v1.doctors import router as doctors_router
 from app.api.v1.patients import router as patients_router
+from app.api.v1.history import router as history_router
 
 settings = get_settings()
 
@@ -17,6 +18,7 @@ app.include_router(slots_router, prefix="/api/v1/slots", tags=["Slots"])
 app.include_router(appointments_router, prefix="/api/v1/appointments", tags=["Appointments"])
 app.include_router(doctors_router, prefix="/api/v1/doctors", tags=["Doctors"])
 app.include_router(patients_router, prefix="/api/v1/patients", tags=["Patients"])
+app.include_router(history_router, prefix="/api/v1/history", tags=["History"])
 
 app.add_middleware(
     CORSMiddleware,

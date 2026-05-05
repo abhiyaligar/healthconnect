@@ -228,3 +228,27 @@ There is no system that dynamically stabilizes overbooked appointment schedules 
 ## 13. References & Resources
 - UI reference provided (Admin, Reception, Patient, Doctor panels)
 - Problem statement: FS-02 Healthcare Stabilizer
+
+## Project: HealthConnect Learning Scheduler
+
+### Progress
+
+#### Phase 1: The Foundation [COMPLETED]
+- [x] Basic Slot Management
+- [x] Consultation Duration Tracking
+
+#### Phase 2: Identity & Intelligence [COMPLETED]
+- [x] **Unified Signup**: Auto-role assignment & profile initialization.
+- [x] **Rolling Average Analytics**: Dynamic speed calculation.
+
+#### Phase 3: Clinical Interactions [COMPLETED]
+- [x] **Clinical Documentation**: Diagnosis & Consultation Notes.
+- [x] **Medical Record Storage**: File uploads (Reports/Scans) via Supabase Storage.
+- [x] **Historical Timeline**: Full clinical history retrieval for Doctors.
+
+#### Phase 4: The Stabilizer [IN PROGRESS]
+- [ ] Overlap Detection & Automatic Bumping Logic.
+- [ ] Receptionist Dashboard.
+
+#### Phase 5: Real-time
+- [ ] Supabase Realtime Queue.

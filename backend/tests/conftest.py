@@ -11,8 +11,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from main import app
 from app.core.database import get_db
-from app.models.base import Base
 from app.api.v1.auth import get_current_user
+from app.models import Base, Slot, Appointment, DoctorProfile, PatientProfile, MedicalRecord
 
 # Use SQLite for testing
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
@@ -47,7 +47,19 @@ def client(db):
 @pytest.fixture
 def mock_user():
     user_id = uuid.uuid4()
-    return {"id": user_id, "email": "test@example.com"}
+    # Mock class to behave like Supabase User object
+    class MockUser:
+        def __init__(self, id, email):
+            self.id = id
+            self.email = email
+            self.user_metadata = {"role": "PATIENT", "full_name": "Test User"}
+        
+        def __getitem__(self, key):
+            if key == "id": return self.id
+            if key == "email": return self.email
+            return None
+
+    return MockUser(user_id, "test@example.com")
 
 @pytest.fixture
 def authenticated_client(client, mock_user, db):

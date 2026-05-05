@@ -1,14 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
 import uuid as uuid_pkg
 from app.core.database import get_db
-from app.models import Appointment, Slot, PatientProfile
-from app.schemas.appointment import AppointmentCreate, AppointmentOut, AppointmentUpdate
+from app.models import Appointment, Slot, PatientProfile, MedicalRecord
+from app.schemas.appointment import AppointmentCreate, AppointmentOut, ClinicalNotesUpdate, MedicalRecordOut
 from app.api.v1.auth import get_current_user
 from app.services.analytics import calculate_doctor_avg
+from app.core.storage import upload_medical_file
 
 router = APIRouter()
 
@@ -25,7 +26,6 @@ def book_appointment(
     if db_slot.status == "CLOSED":
         raise HTTPException(status_code=400, detail="Slot is closed")
 
-    # Fetch patient's base priority safely
     patient_profile = db.query(PatientProfile).filter(PatientProfile.user_id == current_user["id"]).first()
     base_priority = patient_profile.base_priority if patient_profile else 0
 
@@ -51,13 +51,6 @@ def list_my_appointments(
 ):
     return db.query(Appointment).filter(Appointment.patient_id == current_user["id"]).all()
 
-@router.get("/{appointment_id}", response_model=AppointmentOut)
-def get_appointment(appointment_id: UUID, db: Session = Depends(get_db)):
-    db_appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
-    if not db_appointment:
-        raise HTTPException(status_code=404, detail="Appointment not found")
-    return db_appointment
-
 @router.patch("/{appointment_id}/call", response_model=AppointmentOut)
 def start_consultation(appointment_id: UUID, db: Session = Depends(get_db)):
     db_appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
@@ -81,14 +74,69 @@ def complete_consultation(appointment_id: UUID, db: Session = Depends(get_db)):
     
     if db_appointment.actual_start_time:
         duration = (db_appointment.actual_end_time - db_appointment.actual_start_time).total_seconds() / 60
-        db_appointment.consultation_duration = max(1, int(duration)) # Minimum 1 minute
+        db_appointment.consultation_duration = max(1, int(duration))
         
     db.commit()
     db.refresh(db_appointment)
     
-    # Trigger Rolling Average calculation
     db_slot = db_appointment.slot
     if db_slot:
         calculate_doctor_avg(db_slot.doctor_id, db)
         
     return db_appointment
+
+@router.patch("/{appointment_id}/clinical-notes", response_model=AppointmentOut)
+def update_clinical_notes(
+    appointment_id: UUID,
+    notes: ClinicalNotesUpdate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    # Security: Ensure current_user is the doctor of this appointment
+    db_appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
+    if not db_appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+    
+    # Check if doctor owns the slot
+    if db_appointment.slot.doctor_id != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Not authorized to edit this appointment")
+    
+    db_appointment.clinical_notes = notes.clinical_notes
+    db_appointment.diagnosis = notes.diagnosis
+    db.commit()
+    db.refresh(db_appointment)
+    return db_appointment
+
+@router.post("/{appointment_id}/records", response_model=MedicalRecordOut)
+async def upload_record(
+    appointment_id: UUID,
+    file: UploadFile = File(...),
+    file_type: str = Form(...),
+    description: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    db_appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
+    if not db_appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+
+    if db_appointment.slot.doctor_id != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Not authorized to add records to this appointment")
+
+    # Upload to Supabase Storage
+    content = await file.read()
+    file_url = upload_medical_file(content, file.filename, file.content_type)
+    
+    db_record = MedicalRecord(
+        appointment_id=appointment_id,
+        patient_id=db_appointment.patient_id,
+        doctor_id=current_user["id"],
+        file_url=file_url,
+        file_type=file_type,
+        description=description
+    )
+    
+    db.add(db_record)
+    db.commit()
+    db.refresh(db_record)
+    return db_record
