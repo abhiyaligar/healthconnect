@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, AlertTriangle, CalendarDays, BarChart2,
-  Bell, X, Zap, CalendarPlus, Stethoscope, ShieldCheck, LogOut
+  Bell, X, Zap, CalendarPlus, Stethoscope, ShieldCheck, LogOut, Menu
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -56,6 +56,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [stormActive]               = useState(true);
   const [stormDismissed, setStormDismissed] = useState(false);
   const [batchTriggered, setBatchTriggered] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleBatchReschedule = () => {
     setBatchTriggered(true);
@@ -78,8 +79,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen bg-background overflow-hidden">
 
+      {/* Mobile overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-navy-900/50 backdrop-blur-sm z-40 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 bg-surface border-r border-navy-100 flex flex-col">
+      <aside className={cn(
+        "fixed inset-y-0 left-0 z-50 w-64 bg-surface border-r border-navy-100 flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
+        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
         {/* Brand */}
         <div className="p-6 border-b border-navy-100">
           <h1 className="text-2xl font-bold text-primary-700 tracking-tight">HealthConnect</h1>
@@ -115,6 +127,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.path}
                 to={item.path}
+                onClick={() => setIsMobileMenuOpen(false)}
                 className={cn(
                   'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors relative',
                   isActive
@@ -191,13 +204,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         )}
 
         {/* Header */}
-        <header className="h-16 bg-surface border-b border-navy-100 flex items-center justify-between px-8 shrink-0">
-          <p className="text-navy-700 font-medium">
-            Welcome back, <span className="font-bold text-navy-900">{name || 'User'}</span>
-            {role === 'admin' && (
-              <span className="ml-2 text-xs bg-primary-100 text-primary-600 font-bold px-2 py-0.5 rounded-full">ADMIN</span>
-            )}
-          </p>
+        <header className="h-16 bg-surface border-b border-navy-100 flex items-center justify-between px-4 md:px-8 shrink-0">
+          <div className="flex items-center gap-3">
+            <button 
+              className="md:hidden p-2 -ml-2 text-navy-500 hover:text-navy-800 rounded-lg hover:bg-navy-50"
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
+              <Menu size={24} />
+            </button>
+            <p className="text-navy-700 font-medium hidden sm:block">
+              Welcome back, <span className="font-bold text-navy-900">{name || 'User'}</span>
+              {role === 'admin' && (
+                <span className="ml-2 text-xs bg-primary-100 text-primary-600 font-bold px-2 py-0.5 rounded-full">ADMIN</span>
+              )}
+            </p>
+          </div>
           <div className="flex items-center gap-4">
             <button className="relative p-2 text-navy-500 hover:text-navy-800 transition-colors">
               <Bell size={22} />
@@ -210,7 +231,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto p-8">
+        <main className="flex-1 overflow-auto p-4 md:p-8">
           <div className="max-w-[1400px] mx-auto">
             {children}
           </div>

@@ -11,7 +11,7 @@ export default function ReceptionDashboard() {
     <div className="grid grid-cols-12 gap-6">
       
       {/* Card 1: Live Queue Status */}
-      <div className="col-span-12 md:col-span-4 bg-surface rounded-[24px] p-8 shadow-skyline border border-navy-100">
+      <div className="col-span-12 lg:col-span-4 md:col-span-6 bg-surface rounded-[24px] p-6 sm:p-8 shadow-skyline border border-navy-100">
         <h3 className="text-lg font-bold text-navy-800 uppercase tracking-wider text-xs">Live Queue Status</h3>
         <p className="text-sm text-navy-500 mt-1">Total patients in queue today</p>
         <div className="mt-8">
@@ -33,7 +33,7 @@ export default function ReceptionDashboard() {
       </div>
 
       {/* Card 2: 6.6 System Health Widget (Premium Gauge) */}
-      <div className="col-span-12 md:col-span-4 bg-surface rounded-[24px] p-8 shadow-skyline border border-navy-100 flex flex-col items-center text-center overflow-hidden relative">
+      <div className="col-span-12 lg:col-span-4 md:col-span-6 bg-surface rounded-[24px] p-6 sm:p-8 shadow-skyline border border-navy-100 flex flex-col items-center text-center overflow-hidden relative">
         <div className="absolute top-0 right-0 p-4">
           <Info size={16} className="text-navy-300 hover:text-navy-600 cursor-help" />
         </div>
@@ -68,7 +68,7 @@ export default function ReceptionDashboard() {
       </div>
 
       {/* Card 3: Upcoming Schedule */}
-      <div className="col-span-12 md:col-span-4 bg-surface rounded-[24px] p-8 shadow-skyline border border-navy-100">
+      <div className="col-span-12 lg:col-span-4 md:col-span-12 bg-surface rounded-[24px] p-6 sm:p-8 shadow-skyline border border-navy-100">
         <h3 className="text-lg font-bold text-navy-800 uppercase tracking-wider text-xs mb-8">Upcoming Conflict Risk</h3>
         <div className="space-y-4">
           {[
@@ -95,7 +95,7 @@ export default function ReceptionDashboard() {
       </div>
 
       {/* Card 4: Avg Wait Time */}
-      <div className="col-span-12 md:col-span-3 bg-surface rounded-[24px] p-8 shadow-skyline border border-navy-100">
+      <div className="col-span-12 lg:col-span-3 md:col-span-6 bg-surface rounded-[24px] p-6 sm:p-8 shadow-skyline border border-navy-100">
         <h3 className="text-xs font-bold text-navy-400 uppercase tracking-widest mb-4">Avg Wait Time</h3>
         <div className="flex items-baseline gap-2">
           <span className="text-[48px] font-black tracking-tighter text-navy-900 leading-none">18<span className="text-2xl">m</span></span>
@@ -109,7 +109,7 @@ export default function ReceptionDashboard() {
       </div>
 
       {/* Card 5: Auto-Resolution Rate */}
-      <div className="col-span-12 md:col-span-3 bg-surface rounded-[24px] p-8 shadow-skyline border border-navy-100">
+      <div className="col-span-12 lg:col-span-3 md:col-span-6 bg-surface rounded-[24px] p-6 sm:p-8 shadow-skyline border border-navy-100">
         <h3 className="text-xs font-bold text-navy-400 uppercase tracking-widest mb-4">Self-Stabilization</h3>
         <div className="flex items-baseline gap-2">
           <span className="text-[48px] font-black tracking-tighter text-navy-900 leading-none">94<span className="text-2xl">%</span></span>
@@ -124,7 +124,7 @@ export default function ReceptionDashboard() {
       </div>
 
       {/* Card 6: Staff Duty Forecast */}
-      <div className="col-span-12 md:col-span-6 bg-surface rounded-[24px] p-8 shadow-skyline border border-navy-100">
+      <div className="col-span-12 lg:col-span-6 md:col-span-12 bg-surface rounded-[24px] p-6 sm:p-8 shadow-skyline border border-navy-100">
         <div className="flex items-center justify-between mb-8">
             <h3 className="text-lg font-bold text-navy-800 uppercase tracking-wider text-xs">Doctor Workload Forecast</h3>
             <div className="flex items-center gap-3 text-[10px] font-bold text-navy-400">

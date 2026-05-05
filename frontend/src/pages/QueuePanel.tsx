@@ -136,7 +136,7 @@ export default function QueuePanel() {
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-surface rounded-2xl shadow-skyline border border-navy-100 overflow-hidden">
             {/* Column headers */}
-            <div className="grid grid-cols-[48px_1fr_auto_auto] gap-4 px-5 py-3 bg-navy-50 border-b border-navy-100 text-xs font-semibold text-navy-400 uppercase tracking-wide">
+            <div className="hidden sm:grid grid-cols-[48px_1fr_auto_auto] gap-4 px-5 py-3 bg-navy-50 border-b border-navy-100 text-xs font-semibold text-navy-400 uppercase tracking-wide">
               <span>#</span>
               <span>Patient</span>
               <span className="text-right">Status</span>
@@ -162,7 +162,7 @@ export default function QueuePanel() {
                   onClick={() => setSelectedPatient(entry)}
                   style={{ maxHeight: isRemoving ? 0 : 120, opacity: isRemoving ? 0 : 1, overflow: 'hidden', transition: 'max-height 0.35s ease, opacity 0.35s ease' }}
                   className={cn(
-                    'grid grid-cols-[48px_1fr_auto_auto] gap-4 items-center px-5 py-4 border-b border-navy-100 last:border-0 transition-colors cursor-pointer',
+                    'grid grid-cols-[48px_1fr] sm:grid-cols-[48px_1fr_auto_auto] gap-4 items-center px-5 py-4 border-b border-navy-100 last:border-0 transition-colors cursor-pointer',
                     isConsulting && 'bg-primary-50/60 border-l-4 border-l-primary-500',
                     isCalled     && 'bg-navy-50',
                     !isConsulting && !isCalled && 'hover:bg-navy-50/50'
@@ -198,7 +198,7 @@ export default function QueuePanel() {
                   </div>
 
                   {/* Status pill */}
-                  <div>
+                  <div className="col-span-2 sm:col-span-1 mt-2 sm:mt-0 flex sm:block">
                     {isConsulting && (
                       <span className="flex items-center gap-1.5 text-xs font-bold text-primary-600 bg-primary-100 px-2.5 py-1 rounded-full">
                         <Activity size={12} className="animate-pulse" /> Consulting
@@ -217,10 +217,10 @@ export default function QueuePanel() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-1">
+                  <div className="col-span-2 sm:col-span-1 flex items-center gap-1">
                     <button
                       title="Call Next"
-                      onClick={() => callNext(entry.id)}
+                      onClick={(e) => { e.stopPropagation(); callNext(entry.id); }}
                       disabled={isConsulting}
                       className="p-2 rounded-lg text-primary-500 hover:bg-primary-50 hover:text-primary-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     >
@@ -228,7 +228,7 @@ export default function QueuePanel() {
                     </button>
                     <button
                       title="Bump Priority"
-                      onClick={() => bumpPriority(entry.id)}
+                      onClick={(e) => { e.stopPropagation(); bumpPriority(entry.id); }}
                       disabled={entry.priority === 'P1'}
                       className="p-2 rounded-lg text-status-warning hover:bg-status-warning/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     >
@@ -236,7 +236,7 @@ export default function QueuePanel() {
                     </button>
                     <button
                       title="Mark No-show"
-                      onClick={() => markNoShow(entry.id)}
+                      onClick={(e) => { e.stopPropagation(); markNoShow(entry.id); }}
                       className="p-2 rounded-lg text-status-error hover:bg-status-error/10 transition-colors"
                     >
                       <UserX size={16} />
@@ -317,7 +317,7 @@ export default function QueuePanel() {
           {/* Quick stats */}
           <div className="bg-surface rounded-2xl shadow-skyline border border-navy-100 p-5 space-y-4">
             <h2 className="font-bold text-navy-900">Queue Summary</h2>
-            <div className="grid grid-cols-3 gap-3 text-center">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
               {[
                 { label: 'In Queue', value: waiting,    icon: Users,       color: 'text-primary-600'    },
                 { label: 'Consulting', value: consulting, icon: Stethoscope, color: 'text-status-open'   },

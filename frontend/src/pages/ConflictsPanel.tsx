@@ -187,17 +187,17 @@ export default function ConflictsPanel() {
     <div className="max-w-5xl mx-auto pb-12 space-y-6">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-navy-900 tracking-tight">Conflict Resolution</h1>
           <p className="text-navy-500 mt-1">Detected scheduling conflicts · Today's shift</p>
         </div>
         {openCount === 0 ? (
-          <div className="flex items-center gap-2 bg-status-open/10 text-status-open px-4 py-2 rounded-xl text-sm font-bold">
+          <div className="flex items-center gap-2 bg-status-open/10 text-status-open px-4 py-2 rounded-xl text-sm font-bold w-fit">
             <ShieldCheck size={16} /> System Stable
           </div>
         ) : (
-          <div className="flex items-center gap-2 bg-status-error/10 text-status-error px-4 py-2 rounded-xl text-sm font-bold">
+          <div className="flex items-center gap-2 bg-status-error/10 text-status-error px-4 py-2 rounded-xl text-sm font-bold w-fit">
             <AlertTriangle size={16} className="animate-pulse" />
             {openCount} Open {openCount === 1 ? 'Conflict' : 'Conflicts'}
           </div>
@@ -205,7 +205,7 @@ export default function ConflictsPanel() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-2 bg-surface rounded-xl shadow-skyline border border-navy-100 p-1.5 w-fit">
+      <div className="flex items-center gap-2 bg-surface rounded-xl shadow-skyline border border-navy-100 p-1.5 w-full sm:w-fit overflow-x-auto">
         {tabs.map(tab => (
           <button
             key={tab.key}
@@ -256,8 +256,7 @@ export default function ConflictsPanel() {
                 !isOpen && 'opacity-75'
               )}
             >
-              {/* Card header */}
-              <div className="p-5">
+              <div className="p-4 sm:p-5">
                 <div className="flex items-start justify-between gap-4 mb-3">
                   <div className="flex items-center gap-3">
                     <div className={cn('h-9 w-9 rounded-xl flex items-center justify-center shrink-0',
@@ -287,7 +286,7 @@ export default function ConflictsPanel() {
                 </div>
 
                 {/* Details row */}
-                <div className="flex flex-wrap gap-4 text-sm text-navy-500 mb-4 ml-12">
+                <div className="flex flex-wrap gap-4 text-sm text-navy-500 mb-4 ml-0 sm:ml-12 mt-4 sm:mt-0">
                   <span className="flex items-center gap-1.5"><Stethoscope size={14} /> {conflict.doctor}</span>
                   <span className="flex items-center gap-1.5"><Clock size={14} /> {conflict.slotTime}</span>
                   <span className="flex items-center gap-1.5"><User size={14} /> {conflict.affectedCount} patient{conflict.affectedCount > 1 ? 's' : ''} affected</span>
@@ -295,7 +294,7 @@ export default function ConflictsPanel() {
 
                 {/* Affected patients + fairness */}
                 {isOpen && (
-                  <div className="ml-12 mb-4">
+                  <div className="ml-0 sm:ml-12 mb-4">
                     <p className="text-xs font-semibold text-navy-400 uppercase tracking-wide mb-2">Affected Patients &amp; Fairness Impact</p>
                     <div className="space-y-2">
                       {conflict.affectedPatients.map((p: any, i: number) => {
@@ -323,7 +322,7 @@ export default function ConflictsPanel() {
                             </div>
                             
                             {/* Score Explainer */}
-                            <div className="flex items-center gap-3">
+                            <div className="flex flex-wrap items-center gap-3 mt-2">
                               <div className="flex flex-col">
                                 <span className="text-[10px] text-navy-400 uppercase font-bold tracking-wider">Priority Score</span>
                                 <span className="text-lg font-black text-primary-600 leading-none">{p.score.toFixed(1)}</span>
@@ -358,14 +357,14 @@ export default function ConflictsPanel() {
                 )}
 
                 {/* Suggestion box */}
-                <div className="ml-12 p-3 bg-navy-50 border border-navy-100 rounded-lg mb-4">
+                <div className="ml-0 sm:ml-12 p-3 bg-navy-50 border border-navy-100 rounded-lg mb-4">
                   <p className="text-xs text-navy-400 font-semibold uppercase tracking-wide mb-1">System Suggestion</p>
                   <p className="text-sm text-navy-700">{conflict.suggestion}</p>
                 </div>
 
                 {/* Action buttons — only for open conflicts */}
                 {isOpen && (
-                  <div className="ml-12 flex items-center gap-3">
+                  <div className="ml-0 sm:ml-12 flex flex-wrap items-center gap-3">
                     <button
                       onClick={() => autoResolve(conflict.id)}
                       disabled={isLoading}
@@ -395,7 +394,7 @@ export default function ConflictsPanel() {
 
                 {/* Manual override inline form */}
                 {isOpen && isExpanded && (
-                  <div className="ml-12 mt-4 p-4 bg-navy-50 border border-navy-200 rounded-xl space-y-3">
+                  <div className="ml-0 sm:ml-12 mt-4 p-4 bg-navy-50 border border-navy-200 rounded-xl space-y-3">
                     <p className="text-sm font-semibold text-navy-700">Enter a custom resolution slot:</p>
                     <div className="flex gap-3">
                       <input

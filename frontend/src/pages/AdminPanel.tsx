@@ -39,7 +39,7 @@ export default function AdminPanel() {
           </h1>
           <p className="text-navy-500 mt-1">Full system management, user access control, and audit logs.</p>
         </div>
-        <div className="flex bg-navy-100 p-1 rounded-xl">
+        <div className="flex w-full sm:w-fit overflow-x-auto bg-navy-100 p-1 rounded-xl">
           <button 
             onClick={() => setActiveTab('users')}
             className={cn(
@@ -78,8 +78,8 @@ export default function AdminPanel() {
           {/* TAB: USERS */}
           {activeTab === 'users' && (
             <div className="bg-surface rounded-2xl shadow-skyline border border-navy-100 overflow-hidden">
-              <div className="p-6 border-b border-navy-100 flex items-center justify-between gap-4">
-                <div className="relative flex-1 max-w-md">
+              <div className="p-6 border-b border-navy-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="relative flex-1 w-full max-w-md">
                   <Search className="absolute left-3 top-2.5 text-navy-400" size={18} />
                   <input 
                     type="text" 
@@ -87,7 +87,7 @@ export default function AdminPanel() {
                     className="w-full pl-10 pr-4 py-2 border border-navy-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20"
                   />
                 </div>
-                <button className="px-4 py-2 bg-primary-600 text-white text-sm font-bold rounded-lg hover:bg-primary-700 transition-colors">
+                <button className="w-full sm:w-auto px-4 py-2 bg-primary-600 text-white text-sm font-bold rounded-lg hover:bg-primary-700 transition-colors">
                   Add New User
                 </button>
               </div>
@@ -213,9 +213,9 @@ export default function AdminPanel() {
                   </div>
                 </div>
               </div>
-              <div className="flex justify-end gap-3">
-                <button className="px-6 py-2 border border-navy-200 text-navy-600 font-bold rounded-xl hover:bg-navy-50 transition-all">Discard</button>
-                <button className="px-6 py-2 bg-primary-600 text-white font-bold rounded-xl hover:bg-primary-700 transition-all shadow-sm">Save Changes</button>
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
+                <button className="w-full sm:w-auto px-6 py-2 border border-navy-200 text-navy-600 font-bold rounded-xl hover:bg-navy-50 transition-all">Discard</button>
+                <button className="w-full sm:w-auto px-6 py-2 bg-primary-600 text-white font-bold rounded-xl hover:bg-primary-700 transition-all shadow-sm">Save Changes</button>
               </div>
             </div>
           )}

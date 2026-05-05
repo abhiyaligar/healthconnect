@@ -94,12 +94,12 @@ export default function PatientBooking() {
             </div>
           ))}
         </div>
-        <div className="flex justify-between mt-2 px-1 text-sm font-medium text-navy-400">
-          <span className={cn(step >= 1 && "text-primary-700")}>Specialty</span>
-          <span className={cn(step >= 2 && "text-primary-700")}>Doctor</span>
-          <span className={cn(step >= 3 && "text-primary-700")}>Time Slot</span>
-          <span className={cn(step >= 4 && "text-primary-700")}>Details</span>
-          <span className={cn(step >= 5 && "text-primary-700")}>Confirmation</span>
+        <div className="flex justify-between mt-2 px-1 text-[10px] sm:text-sm font-medium text-navy-400 text-center">
+          <span className={cn("w-16 sm:w-auto", step >= 1 && "text-primary-700")}>Specialty</span>
+          <span className={cn("w-16 sm:w-auto", step >= 2 && "text-primary-700")}>Doctor</span>
+          <span className={cn("w-16 sm:w-auto", step >= 3 && "text-primary-700")}>Time Slot</span>
+          <span className={cn("w-16 sm:w-auto", step >= 4 && "text-primary-700")}>Details</span>
+          <span className={cn("w-16 sm:w-auto", step >= 5 && "text-primary-700")}>Confirm</span>
         </div>
       </div>
 
@@ -114,7 +114,7 @@ export default function PatientBooking() {
           </button>
         )}
 
-        <div className="p-10 pt-16">
+        <div className="p-6 sm:p-10 pt-16">
           {/* STEP 1: SPECIALTY */}
           {step === 1 && (
             <div className="transition-opacity duration-500 opacity-100">
@@ -242,7 +242,7 @@ export default function PatientBooking() {
                 
                 <div>
                   <label className="block text-sm font-semibold text-navy-700 mb-1.5">Self-Assessed Severity</label>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {['Mild', 'Moderate', 'Severe'].map(sev => (
                       <button
                         key={sev}
