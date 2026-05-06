@@ -139,16 +139,30 @@ def list_my_appointments(
 def list_doctor_appointments(
     page: int = 1,
     limit: int = 10,
+    date: Optional[str] = None,   # YYYY-MM-DD in IST
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
+    import pytz
+    from datetime import datetime as dt
     user_id = uuid_pkg.UUID(str(current_user.id))
     doctor = db.query(DoctorProfile).filter(DoctorProfile.user_id == user_id).first()
     if not doctor:
         return PaginatedResponse(items=[], total=0, page=page, size=limit, pages=0)
     query = db.query(Appointment).join(Slot).filter(Slot.doctor_id == doctor.custom_id)
+
+    # Filter by IST date window if provided
+    if date:
+        IST = pytz.timezone("Asia/Kolkata")
+        local_dt = IST.localize(dt.strptime(date, "%Y-%m-%d"))
+        start_utc = local_dt.astimezone(pytz.utc)
+        end_utc = IST.localize(dt.strptime(date, "%Y-%m-%d").replace(hour=23, minute=59, second=59)).astimezone(pytz.utc)
+        query = query.filter(Slot.start_time >= start_utc, Slot.start_time <= end_utc)
+
+    query = query.order_by(Slot.start_time.asc())
     items, total, pages = paginate(query, page, limit)
     return PaginatedResponse(items=items, total=total, page=page, size=limit, pages=pages)
+
 
 @router.get("/all", response_model=PaginatedResponse[AppointmentOut])
 def list_all_appointments(page: int = 1, limit: int = 10, db: Session = Depends(get_db)):

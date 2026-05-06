@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { User, Clock, Activity, AlertTriangle, CheckCircle2, TrendingUp, MoreVertical, Calendar, Coffee, Wifi, X, FileText, HeartPulse } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { User, Clock, Activity, AlertTriangle, CheckCircle2, TrendingUp, MoreVertical, Calendar, Coffee, Wifi, X, FileText, HeartPulse, ChevronLeft, ChevronRight, RotateCcw, BookOpen } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import api from '../api';
@@ -8,7 +8,7 @@ import PrescriptionBuilder from '../components/PrescriptionBuilder';
 import VitalsEntry from '../components/VitalsEntry';
 import ICDAutoComplete from '../components/ICDAutoComplete';
 import MedicalTimeline from '../components/MedicalTimeline';
-import { toISTTime } from '../utils/time';
+import { toISTTime, todayIST } from '../utils/time';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -31,6 +31,7 @@ interface Appointment {
 }
 
 interface DoctorProfile {
+  custom_id: string;
   full_name: string;
   specialty: string;
   patientsSeen: number;
@@ -45,7 +46,8 @@ export default function DoctorDashboard() {
   const [profile, setProfile] = useState<DoctorProfile | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [patientHistory, setPatientHistory] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isFetchingSchedule, setIsFetchingSchedule] = useState(false);
   const [notes, setNotes] = useState({ diagnosis: '', clinical_notes: '' });
   const [isConsulting, setIsConsulting] = useState(false);
   const [showFullChart, setShowFullChart] = useState(false);
@@ -55,6 +57,14 @@ export default function DoctorDashboard() {
     bp_systolic: '', bp_diastolic: '', heart_rate: '', spo2: '', temperature: '', weight: ''
   });
   const [followUpDate, setFollowUpDate] = useState('');
+
+  // Schedule filter & pagination
+  const [selectedDate, setSelectedDate] = useState<string | null>(todayIST());
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [availableSlots, setAvailableSlots] = useState(0);
+  const LIMIT = 10;
 
   const handlePatientSelect = (appt: Appointment) => {
     setSelectedPatient(appt);
@@ -104,24 +114,55 @@ export default function DoctorDashboard() {
     setShowFullChart(false);
   };
 
+  const fetchAppointments = useCallback(async (date: string | null, pg: number) => {
+    try {
+      setIsFetchingSchedule(true);
+      const params = new URLSearchParams({ page: String(pg), limit: String(LIMIT) });
+      if (date) params.set('date', date);
+      
+      const [apptsRes, slotsRes] = await Promise.all([
+        api.get(`/appointments/doctor/me?${params}`),
+        // Fetch open slots ONLY for this doctor for the selected date
+        date && profile?.custom_id 
+          ? api.get(`/slots/?date=${date}&doctor_id=${profile.custom_id}`).catch(() => ({ data: [] })) 
+          : Promise.resolve({ data: [] })
+      ]);
+      
+      const data = apptsRes.data;
+      setAppointments(data.items || data || []);
+      setTotalCount(data.total ?? (data.items || data || []).length);
+      setTotalPages(data.pages ?? 1);
+      
+      if (date) {
+        const slots = Array.isArray(slotsRes.data) ? slotsRes.data : slotsRes.data?.items || [];
+        setAvailableSlots(slots.length); // Already filtered by status=OPEN on backend
+      } else {
+        setAvailableSlots(0);
+      }
+    } catch (err) {
+      console.error('Failed to fetch appointments', err);
+    } finally {
+      setIsFetchingSchedule(false);
+    }
+  }, [profile?.custom_id]);
+
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchProfile = async () => {
       try {
-        setLoading(true);
-        const [profileRes, apptsRes] = await Promise.all([
-          api.get('/doctors/me'),
-          api.get('/appointments/doctor/me')
-        ]);
+        const profileRes = await api.get('/doctors/me');
         setProfile(profileRes.data);
-        setAppointments(apptsRes.data.items || apptsRes.data);
       } catch (err) {
-        console.error('Failed to fetch doctor data', err);
+        console.error('Failed to fetch doctor profile', err);
       } finally {
-        setLoading(false);
+        setIsInitialLoading(false);
       }
     };
-    fetchData();
+    fetchProfile();
   }, []);
+
+  useEffect(() => {
+    fetchAppointments(selectedDate, page);
+  }, [selectedDate, page, fetchAppointments]);
 
   useEffect(() => {
     const fetchPatientHistory = async () => {
@@ -211,7 +252,12 @@ export default function DoctorDashboard() {
     }
   };
 
-  if (loading) return <div className="flex items-center justify-center h-screen">Loading Dashboard...</div>;
+  if (isInitialLoading) return <div className="flex items-center justify-center h-screen bg-surface">
+    <div className="flex flex-col items-center gap-4">
+      <Activity className="text-primary-600 animate-pulse" size={48} />
+      <p className="text-navy-500 font-bold animate-pulse">Initializing Medical Portal...</p>
+    </div>
+  </div>;
 
   const completedCount = appointments.filter(a => a.status === 'COMPLETED').length;
 
@@ -253,48 +299,166 @@ export default function DoctorDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Left Column: Today's Schedule */}
+        {/* Left Column: Schedule */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-navy-900">Today's Schedule</h2>
-          </div>
-          
-          <div className="bg-surface rounded-2xl shadow-skyline border border-navy-100 overflow-hidden">
-            <div className="p-0">
-              {appointments.length === 0 ? (
-                <div className="p-10 text-center text-navy-400">No appointments scheduled today.</div>
-              ) : appointments.map(appt => (
-                <div 
-                  key={appt.id} 
-                  onClick={() => handlePatientSelect(appt)}
-                  className={cn(
-                    "flex items-center justify-between p-5 border-b border-navy-100 last:border-0 hover:bg-navy-50 transition-colors cursor-pointer",
-                    appt.status === 'IN_PROGRESS' && "bg-primary-50/50"
-                  )}
-                >
-                  <div className="flex items-center gap-6">
-                    <div className="flex flex-col items-center justify-center w-16">
-                      <span className="text-sm font-bold text-navy-900">{appt.slot ? toISTTime(appt.slot.start_time) : '--'}</span>
-                    </div>
-                    
-                    <div className="flex flex-col">
-                      <span className="text-base font-semibold text-navy-900">{appt.queue_token}</span>
-                      <span className="text-sm text-navy-500">Patient ID: {appt.patient_id.split('-')[0]}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-4 sm:gap-6">
-                    <span className={cn("px-2.5 py-1 rounded-md text-xs font-semibold border items-center gap-1.5", getPriorityColor(appt.priority_score))}>
-                      Priority: {appt.priority_score}
-                    </span>
-                    
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-surface border border-navy-100 shadow-sm shrink-0">
-                      {getStatusIndicator(appt.status)}
-                    </div>
-                  </div>
+
+          {/* Date picker + count bar */}
+          <div className="bg-white rounded-2xl border border-navy-100 shadow-skyline p-5">
+            <div className="flex flex-wrap items-end gap-4">
+              {/* Calendar input */}
+              <div className="flex-1 min-w-[180px]">
+                <label className="block text-[10px] font-bold text-navy-400 uppercase mb-1.5">Filter by Date</label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-navy-400" size={16} />
+                  <input
+                    type="date"
+                    value={selectedDate || ''}
+                    onChange={e => { setSelectedDate(e.target.value || null); setPage(1); }}
+                    className="w-full pl-9 pr-3 py-2.5 border border-navy-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 font-medium"
+                  />
                 </div>
-              ))}
+              </div>
+
+              {/* Reset to today */}
+              <button
+                onClick={() => { setSelectedDate(null); setPage(1); }}
+                className={cn(
+                  "flex items-center gap-1.5 px-4 py-2.5 border rounded-xl text-sm font-bold transition-colors",
+                  selectedDate === null 
+                    ? "bg-navy-900 text-white border-navy-900" 
+                    : "border-navy-200 text-navy-600 hover:bg-navy-50"
+                )}
+              >
+                <BookOpen size={14} /> Show All
+              </button>
+
+              <button
+                onClick={() => { setSelectedDate(todayIST()); setPage(1); }}
+                className={cn(
+                  "flex items-center gap-1.5 px-4 py-2.5 border rounded-xl text-sm font-bold transition-colors",
+                  selectedDate === todayIST()
+                    ? "bg-primary-600 text-white border-primary-600"
+                    : "border-navy-200 text-navy-600 hover:bg-navy-50"
+                )}
+              >
+                <RotateCcw size={14} /> Today
+              </button>
+
+              {/* Available slots badge */}
+              <div className="flex flex-col items-center bg-status-open/10 border border-status-open/20 rounded-xl px-5 py-2">
+                <span className="text-[10px] font-bold text-status-open/70 uppercase tracking-wider">Available</span>
+                <span className="text-2xl font-black text-status-open leading-none">{availableSlots}</span>
+                <span className="text-[9px] text-status-open/60 font-medium">open slots</span>
+              </div>
+
+              {/* Total appointments badge */}
+              <div className="flex flex-col items-center bg-primary-50 border border-primary-100 rounded-xl px-5 py-2">
+                <span className="text-[10px] font-bold text-primary-600/70 uppercase tracking-wider">Booked</span>
+                <span className="text-2xl font-black text-primary-700 leading-none">{totalCount}</span>
+                <span className="text-[9px] text-primary-500 font-medium">appointments</span>
+              </div>
             </div>
+
+            {/* Date label */}
+            <p className="text-xs text-navy-400 font-medium mt-3">
+              {selectedDate === null
+                ? '📋 Showing all appointments (month-wide)'
+                : selectedDate === todayIST()
+                ? '📅 Showing today\'s schedule'
+                : `📅 Showing schedule for ${new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`
+              }
+            </p>
+          </div>
+
+          {/* Appointment List */}
+          <div className="bg-surface rounded-2xl shadow-skyline border border-navy-100 overflow-hidden relative min-h-[400px]">
+            {isFetchingSchedule && (
+              <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 flex items-center justify-center">
+                <Activity className="text-primary-600 animate-spin" size={32} />
+              </div>
+            )}
+
+            {appointments.length === 0 ? (
+              <div className="p-12 text-center">
+                <BookOpen size={32} className="mx-auto text-navy-200 mb-3" />
+                <p className="text-navy-400 font-medium">No appointments for this date.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col h-full">
+                <div className="divide-y divide-navy-100">
+                  {appointments.map(appt => (
+                    <div
+                      key={appt.id}
+                      onClick={() => handlePatientSelect(appt)}
+                      className={cn(
+                        "flex items-center justify-between p-5 hover:bg-navy-50 transition-colors cursor-pointer",
+                        appt.status === 'IN_PROGRESS' && "bg-primary-50/50"
+                      )}
+                    >
+                      <div className="flex items-center gap-6">
+                        <div className="flex flex-col items-center justify-center w-16 text-center">
+                          <span className="text-sm font-bold text-navy-900">{appt.slot ? toISTTime(appt.slot.start_time) : '--'}</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-base font-semibold text-navy-900">{appt.queue_token}</span>
+                          <span className="text-sm text-navy-500">Patient ID: {appt.patient_id.split('-')[0]}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 sm:gap-6">
+                        <span className={cn("px-2.5 py-1 rounded-md text-xs font-semibold border items-center gap-1.5", getPriorityColor(appt.priority_score))}>
+                          Priority: {appt.priority_score}
+                        </span>
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-surface border border-navy-100 shadow-sm shrink-0">
+                          {getStatusIndicator(appt.status)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="mt-auto flex items-center justify-between px-6 py-4 border-t border-navy-100 bg-navy-50/50">
+                    <p className="text-xs text-navy-400 font-medium">
+                      Page {page} of {totalPages} · {totalCount} total
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                        className="p-2 rounded-lg border border-navy-200 text-navy-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+                      {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                        const pg = i + 1;
+                        return (
+                          <button
+                            key={pg}
+                            onClick={() => setPage(pg)}
+                            className={cn(
+                              'w-8 h-8 rounded-lg text-xs font-bold transition-colors',
+                              pg === page
+                                ? 'bg-primary-600 text-white'
+                                : 'border border-navy-200 text-navy-600 hover:bg-white'
+                            )}
+                          >
+                            {pg}
+                          </button>
+                        );
+                      })}
+                      <button
+                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                        disabled={page === totalPages}
+                        className="p-2 rounded-lg border border-navy-200 text-navy-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <ChevronRight size={16} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
