@@ -137,7 +137,8 @@ export default function LandingPage() {
       setStep('verify');
       setError('');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Signup failed.');
+      const msg = err.response?.data?.detail || 'Account creation failed. Please try again.';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -185,7 +186,8 @@ export default function LandingPage() {
       setResetSent(true);
       setError('');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to send reset link.');
+      const msg = err.response?.data?.detail || 'Failed to send reset link. Please verify your email.';
+      setError(msg);
     } finally {
       setLoading(false);
     }

@@ -12,9 +12,25 @@ from fastapi import BackgroundTasks
 import random
 import string
 import uuid as uuid_pkg
+import logging
 
 router = APIRouter()
 security = HTTPBearer()
+logger = logging.getLogger(__name__)
+
+def handle_auth_error(e: AuthApiError):
+    msg = str(e).lower()
+    if "invalid login credentials" in msg:
+        return HTTPException(status_code=401, detail="Invalid email or password. Please try again.")
+    if "user already registered" in msg:
+        return HTTPException(status_code=409, detail="This email is already associated with an account.")
+    if "password should be at least" in msg:
+        return HTTPException(status_code=400, detail="Password is too weak. Must be at least 6 characters.")
+    if "email not confirmed" in msg:
+        return HTTPException(status_code=403, detail="Please verify your email before logging in.")
+    
+    logger.error(f"Supabase Auth Error: {str(e)}")
+    return HTTPException(status_code=400, detail=str(e))
 
 async def get_current_user(token: HTTPAuthorizationCredentials = Depends(security)):
     supabase = get_supabase()
@@ -102,11 +118,12 @@ async def signup(user_data: SignupRequest, background_tasks: BackgroundTasks, db
             role=user_data.role,
             custom_id=custom_id
         )
+        )
     except AuthApiError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise handle_auth_error(e)
     except Exception as e:
-        print(f"Signup Error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        logger.error(f"Critical Signup Error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An internal server error occurred during signup. Please try again later.")
 
 @router.post("/login", response_model=TokenResponse)
 async def login(user_data: UserAuth):
@@ -133,12 +150,12 @@ async def login(user_data: UserAuth):
                 role=user_meta.get("role")
             )
         )
+        )
     except AuthApiError as e:
-        print(f"Auth Error: {str(e)}")
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+        raise handle_auth_error(e)
     except Exception as e:
-        print(f"Login Error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        logger.error(f"Critical Login Error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Unable to complete login. Please verify your connection.")
 
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user = Depends(get_current_user)):

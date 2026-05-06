@@ -183,11 +183,19 @@ export default function PatientBooking() {
                   .map((spec) => {
                   const Icon = specialtyIcons[spec] || Stethoscope;
                   return (
-                    <div key={spec} onClick={() => handleSpecialtySelect(spec)} className="group p-6 rounded-xl border border-navy-100 hover:border-primary-300 hover:bg-navy-50 cursor-pointer flex items-start gap-4">
-                      <div className="h-12 w-12 rounded-full bg-navy-50 text-primary-600 group-hover:bg-primary-600 group-hover:text-white flex items-center justify-center">
-                        <Icon size={24} />
+                    <div key={spec} className="group p-6 rounded-xl border border-navy-100 hover:border-primary-300 hover:bg-navy-50 cursor-pointer flex items-start justify-between">
+                      <div onClick={() => handleSpecialtySelect(spec)} className="flex items-start gap-4 flex-1">
+                        <div className="h-12 w-12 rounded-full bg-navy-50 text-primary-600 group-hover:bg-primary-600 group-hover:text-white flex items-center justify-center">
+                          <Icon size={24} />
+                        </div>
+                        <h3 className="text-lg font-semibold text-navy-900 mt-2">{spec}</h3>
                       </div>
-                      <h3 className="text-lg font-semibold text-navy-900 mt-2">{spec}</h3>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleSpecialtySelect(spec); }}
+                        className="self-center px-4 py-2 bg-primary-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover:opacity-100 transition-all flex items-center gap-2 shadow-lg"
+                      >
+                        <Zap size={12} className="fill-white" /> Quickest
+                      </button>
                     </div>
                   );
                 })}

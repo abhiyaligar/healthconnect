@@ -1,4 +1,4 @@
-import { Zap, Activity, Info, Clock, AlertTriangle, Users, UserPlus, Calendar, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Zap, Activity, Info, Clock, AlertTriangle, Users, UserPlus, Calendar, CheckCircle2, ArrowRight, Search } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -18,6 +18,8 @@ export default function ReceptionDashboard() {
   const [surgeStatus, setSurgeStatus] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDocForOpt, setSelectedDocForOpt] = useState<string | null>(null);
+  const [patientSearch, setPatientSearch] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -28,8 +30,10 @@ export default function ReceptionDashboard() {
         ]);
         setStats(statsRes.data);
         setSurgeStatus(surgeRes.data);
-      } catch (err) {
+        setError('');
+      } catch (err: any) {
         console.error('Failed to fetch dashboard data');
+        setError('Network error: Dashboard out of sync.');
       } finally {
         setLoading(false);
       }
@@ -43,6 +47,20 @@ export default function ReceptionDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Search Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="relative flex-1 max-w-xl">
+          <Search className="absolute left-4 top-3.5 text-navy-400" size={18} />
+          <input 
+            type="text" 
+            placeholder="Quick search patient in queue, ID or phone..."
+            value={patientSearch}
+            onChange={(e) => setPatientSearch(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 bg-white border border-navy-100 rounded-[20px] shadow-skyline focus:ring-2 focus:ring-primary-500/20 focus:outline-none text-sm"
+          />
+        </div>
+        {error && <div className="text-status-error text-xs font-bold animate-pulse">{error}</div>}
+      </div>
       
       {/* Storm & Safety Alert Banner */}
       {(surgeStatus?.is_storm || surgeStatus?.lobby_overcrowded || (surgeStatus?.fatigued_doctors?.length > 0)) && (
