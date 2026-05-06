@@ -3,6 +3,7 @@ import { Heart, Brain, Bone, Eye, Star, Clock, Calendar, CheckCircle2, AlertCirc
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import api from '../api';
+import { toISTTime, todayIST } from '../utils/time';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -44,7 +45,7 @@ export default function PatientBooking() {
   const [patientDetails, setPatientDetails] = useState({ symptoms: '', severity: 'Moderate', history: '' });
   const [loading, setLoading] = useState(false);
   const [bookingResult, setBookingResult] = useState<any>(null);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(todayIST());
   const [specialtySearch, setSpecialtySearch] = useState('');
 
   useEffect(() => {
@@ -274,7 +275,7 @@ export default function PatientBooking() {
                       slot.status === 'OPEN' ? "bg-white border-status-open/30 text-status-open hover:bg-status-open hover:text-white shadow-sm" : "bg-navy-50 text-navy-400 cursor-not-allowed"
                     )}
                   >
-                    <span className="font-bold">{new Date(slot.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: true})}</span>
+                    <span className="font-bold">{toISTTime(slot.start_time)}</span>
                     <span className="text-[10px] opacity-60">Max {slot.max_capacity} patients</span>
                   </button>
                 ))}
@@ -285,7 +286,7 @@ export default function PatientBooking() {
           {step === 4 && selectedSlot && (
             <div className="max-w-2xl mx-auto text-center">
               <h2 className="text-2xl font-bold text-navy-900 mb-2">Final Step</h2>
-              <p className="text-navy-500 mb-8">Confirm your booking for {new Date(selectedSlot.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+              <p className="text-navy-500 mb-8">Confirm your booking for {toISTTime(selectedSlot.start_time)}</p>
               
               <div className="space-y-5">
                 <div>

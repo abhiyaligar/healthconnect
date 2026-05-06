@@ -3,9 +3,12 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime, time, timezone
 from uuid import UUID
+import pytz
 from app.core.database import get_db
 from app.models.slot import Slot
 from app.schemas.slot import SlotCreate, SlotOut, SlotUpdate
+
+IST = pytz.timezone('Asia/Kolkata')
 
 router = APIRouter()
 
@@ -29,10 +32,12 @@ def list_slots(
     if date:
         try:
             target_date = datetime.strptime(date, "%Y-%m-%d").date()
-            # Filter for slots on this date (timezone aware)
+            # Compute IST day boundaries then convert to UTC for the DB query
+            day_start_ist = IST.localize(datetime.combine(target_date, time.min))
+            day_end_ist = IST.localize(datetime.combine(target_date, time.max))
             query = query.filter(
-                Slot.start_time >= datetime.combine(target_date, time.min).replace(tzinfo=timezone.utc),
-                Slot.start_time <= datetime.combine(target_date, time.max).replace(tzinfo=timezone.utc)
+                Slot.start_time >= day_start_ist.astimezone(timezone.utc),
+                Slot.start_time <= day_end_ist.astimezone(timezone.utc)
             )
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")

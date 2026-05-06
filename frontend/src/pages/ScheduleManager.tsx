@@ -4,6 +4,7 @@ import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { todayIST } from '../utils/time';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -24,6 +25,30 @@ interface Doctor {
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+/** Convert HH:MM (24h) → { hour, minute, period } for 12h display */
+function to12h(time24: string) {
+  const [h, m] = time24.split(':').map(Number);
+  const period = h < 12 ? 'AM' : 'PM';
+  const hour = h % 12 === 0 ? 12 : h % 12;
+  return { hour, minute: m, period };
+}
+
+/** Convert 12h parts → HH:MM (24h) for API */
+function to24h(hour: number, minute: number, period: string): string {
+  let h = hour % 12;
+  if (period === 'PM') h += 12;
+  return `${String(h).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+}
+
+/** Format HH:MM string for display in 12h */
+function fmt12(time: string): string {
+  const { hour, minute, period } = to12h(time);
+  return `${hour}:${String(minute).padStart(2, '0')} ${period}`;
+}
+
+const HOURS = Array.from({ length: 12 }, (_, i) => i + 1); // 1–12
+const MINUTES = [0, 15, 30, 45];
+
 export default function ScheduleManager() {
   const { role, id: userId } = useAuth();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -31,8 +56,21 @@ export default function ScheduleManager() {
   const [availabilities, setAvailabilities] = useState<Availability[]>([]);
   const [loading, setLoading] = useState(false);
   const [launching, setLaunching] = useState(false);
-  const [launchDate, setLaunchDate] = useState(new Date().toISOString().split('T')[0]);
+  const [launchDate, setLaunchDate] = useState(todayIST());
   const [newSlot, setNewSlot] = useState({ day: 0, start: '09:00', end: '13:00' });
+
+  // Derived 12h state for the UI pickers
+  const startParts = to12h(newSlot.start);
+  const endParts = to12h(newSlot.end);
+
+  const setStartPart = (key: 'hour' | 'minute' | 'period', val: number | string) => {
+    const next = { ...startParts, [key]: typeof val === 'string' ? val : Number(val) };
+    setNewSlot(s => ({ ...s, start: to24h(next.hour, next.minute, next.period) }));
+  };
+  const setEndPart = (key: 'hour' | 'minute' | 'period', val: number | string) => {
+    const next = { ...endParts, [key]: typeof val === 'string' ? val : Number(val) };
+    setNewSlot(s => ({ ...s, end: to24h(next.hour, next.minute, next.period) }));
+  };
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
   useEffect(() => {
@@ -193,7 +231,7 @@ export default function ScheduleManager() {
                     <div className="min-h-[150px] bg-navy-50/50 rounded-lg border border-dashed border-navy-200 p-2 space-y-2">
                       {availabilities.filter(a => a.day_of_week === idx).map(avail => (
                         <div key={avail.id} className="text-[10px] bg-white p-1.5 rounded border border-navy-100 shadow-sm flex justify-between items-center group">
-                          <span>{avail.start_time.slice(0, 5)} - {avail.end_time.slice(0, 5)}</span>
+                          <span>{fmt12(avail.start_time.slice(0, 5))} – {fmt12(avail.end_time.slice(0, 5))}</span>
                           <button 
                             onClick={() => handleDeleteAvailability(avail.id)}
                             className="text-navy-300 hover:text-status-error opacity-0 group-hover:opacity-100 transition-opacity"
@@ -208,44 +246,104 @@ export default function ScheduleManager() {
               </div>
 
               <div className="mt-8 p-6 bg-primary-50 rounded-2xl border border-primary-100">
-                <h3 className="font-bold text-primary-900 mb-4 text-sm">Add New Availability Block</h3>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <h3 className="font-bold text-primary-900 mb-5 text-sm">Add New Availability Block</h3>
+                <div className="space-y-4">
+                  {/* Row 1: Day */}
                   <div>
-                    <label className="block text-[10px] font-bold text-primary-700 uppercase mb-1">Day</label>
-                    <select 
+                    <label className="block text-[10px] font-bold text-primary-700 uppercase mb-1.5">Day</label>
+                    <select
                       value={newSlot.day}
                       onChange={e => setNewSlot(s => ({...s, day: parseInt(e.target.value)}))}
-                      className="w-full p-2 bg-white border border-primary-200 rounded-lg text-sm"
+                      className="w-full max-w-xs p-2.5 bg-white border border-primary-200 rounded-lg text-sm font-medium"
                     >
                       {DAYS.map((day, idx) => <option key={day} value={idx}>{day}</option>)}
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-primary-700 uppercase mb-1">Start</label>
-                    <input 
-                      type="time" 
-                      value={newSlot.start}
-                      onChange={e => setNewSlot(s => ({...s, start: e.target.value}))}
-                      className="w-full p-2 bg-white border border-primary-200 rounded-lg text-sm"
-                    />
+
+                  {/* Row 2: Start → End + Button */}
+                  <div className="flex flex-wrap gap-3 items-end">
+                    {/* Start Time */}
+                    <div className="shrink-0">
+                      <label className="block text-[10px] font-bold text-primary-700 uppercase mb-1.5">Start Time</label>
+                      <div className="flex items-center gap-1">
+                        <select
+                          value={startParts.hour}
+                          onChange={e => setStartPart('hour', e.target.value)}
+                          className="w-14 p-2.5 bg-white border border-primary-200 rounded-lg text-sm text-center font-medium"
+                        >
+                          {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
+                        </select>
+                        <span className="text-primary-400 font-black">:</span>
+                        <select
+                          value={startParts.minute}
+                          onChange={e => setStartPart('minute', e.target.value)}
+                          className="w-14 p-2.5 bg-white border border-primary-200 rounded-lg text-sm text-center font-medium"
+                        >
+                          {MINUTES.map(m => <option key={m} value={m}>{String(m).padStart(2, '0')}</option>)}
+                        </select>
+                        <select
+                          value={startParts.period}
+                          onChange={e => setStartPart('period', e.target.value)}
+                          className="w-16 p-2.5 bg-white border border-primary-200 rounded-lg text-sm text-center font-bold text-primary-700"
+                        >
+                          <option>AM</option>
+                          <option>PM</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="shrink-0 pb-2.5 text-primary-300 font-black text-lg">→</div>
+
+                    {/* End Time */}
+                    <div className="shrink-0">
+                      <label className="block text-[10px] font-bold text-primary-700 uppercase mb-1.5">End Time</label>
+                      <div className="flex items-center gap-1">
+                        <select
+                          value={endParts.hour}
+                          onChange={e => setEndPart('hour', e.target.value)}
+                          className="w-14 p-2.5 bg-white border border-primary-200 rounded-lg text-sm text-center font-medium"
+                        >
+                          {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
+                        </select>
+                        <span className="text-primary-400 font-black">:</span>
+                        <select
+                          value={endParts.minute}
+                          onChange={e => setEndPart('minute', e.target.value)}
+                          className="w-14 p-2.5 bg-white border border-primary-200 rounded-lg text-sm text-center font-medium"
+                        >
+                          {MINUTES.map(m => <option key={m} value={m}>{String(m).padStart(2, '0')}</option>)}
+                        </select>
+                        <select
+                          value={endParts.period}
+                          onChange={e => setEndPart('period', e.target.value)}
+                          className="w-16 p-2.5 bg-white border border-primary-200 rounded-lg text-sm text-center font-bold text-primary-700"
+                        >
+                          <option>AM</option>
+                          <option>PM</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Add Button */}
+                    <button
+                      onClick={handleAddTemplate}
+                      className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-bold text-sm transition-all"
+                    >
+                      <Plus size={16} /> Add Block
+                    </button>
                   </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-primary-700 uppercase mb-1">End</label>
-                    <input 
-                      type="time" 
-                      value={newSlot.end}
-                      onChange={e => setNewSlot(s => ({...s, end: e.target.value}))}
-                      className="w-full p-2 bg-white border border-primary-200 rounded-lg text-sm"
-                    />
+
+                  {/* Preview */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-[10px] font-bold text-primary-400 uppercase tracking-wide">Preview:</span>
+                    <span className="text-xs font-bold text-primary-800 bg-white px-3 py-1 rounded-full border border-primary-200">
+                      {DAYS[newSlot.day]} · {fmt12(newSlot.start)} – {fmt12(newSlot.end)}
+                    </span>
                   </div>
-                  <button 
-                    onClick={handleAddTemplate}
-                    className="flex items-center justify-center gap-2 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-bold text-sm transition-all"
-                  >
-                    <Plus size={16} /> Add Block
-                  </button>
                 </div>
               </div>
+
             </div>
           </div>
         </div>

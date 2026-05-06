@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 import uuid as uuid_pkg
+import pytz
 from app.core.database import get_db
 from app.models.doctor import DoctorProfile
 from app.schemas.profile import DoctorProfileOut, DoctorProfileUpdate, DoctorProfileCreate
@@ -12,6 +13,8 @@ from app.schemas.pagination import PaginatedResponse, paginate
 from app.models.appointment import Appointment
 from app.models.slot import Slot
 from datetime import datetime, timezone
+
+IST = pytz.timezone('Asia/Kolkata')
 
 router = APIRouter()
 
@@ -23,15 +26,19 @@ def recommend_doctors(specialty: str, db: Session = Depends(get_db)):
         DoctorProfile.status == "ACTIVE"
     ).all()
     
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(IST).date()  # Use IST date
     
     # 2. Calculate load for each doctor (Appointments for today)
     doctor_loads = []
     for doc in doctors:
+        # Compute IST day boundaries in UTC for the DB query
+        from datetime import time
+        day_start = IST.localize(datetime.combine(today, time.min)).astimezone(timezone.utc)
+        day_end = IST.localize(datetime.combine(today, time.max)).astimezone(timezone.utc)
         load = db.query(Appointment).join(Slot).filter(
             Slot.doctor_id == doc.custom_id,
-            Slot.start_time >= datetime.combine(today, datetime.min.time()).replace(tzinfo=timezone.utc),
-            Slot.start_time <= datetime.combine(today, datetime.max.time()).replace(tzinfo=timezone.utc),
+            Slot.start_time >= day_start,
+            Slot.start_time <= day_end,
             Appointment.status != "CANCELLED"
         ).count()
         

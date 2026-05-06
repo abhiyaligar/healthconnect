@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime, time, timedelta, timezone
+import pytz
 from app.core.database import get_db
 from app.models.availability import DoctorAvailability
 from app.models.doctor import DoctorProfile
@@ -9,6 +10,8 @@ from app.models.slot import Slot
 from app.schemas.availability import AvailabilityCreate, AvailabilityOut, AvailabilityUpdate, ScheduleLaunchRequest
 from app.api.v1.auth import get_current_user
 import uuid
+
+IST = pytz.timezone('Asia/Kolkata')
 
 router = APIRouter()
 
@@ -82,8 +85,12 @@ def _internal_launch(doctor_id: str, date_str: str, db: Session):
     
     created_slots = 0
     for template in templates:
-        current_time = datetime.combine(target_date, template.start_time).replace(tzinfo=timezone.utc)
-        end_dt = datetime.combine(target_date, template.end_time).replace(tzinfo=timezone.utc)
+        # Combine the date with the template time, treating it as IST
+        # (Doctor enters 09:00 IST — we must convert to UTC for storage)
+        current_time_ist = IST.localize(datetime.combine(target_date, template.start_time))
+        end_dt_ist = IST.localize(datetime.combine(target_date, template.end_time))
+        current_time = current_time_ist.astimezone(timezone.utc)
+        end_dt = end_dt_ist.astimezone(timezone.utc)
         
         while current_time + timedelta(minutes=duration) <= end_dt:
             if current_time not in existing_times:
@@ -110,7 +117,7 @@ def _internal_launch(doctor_id: str, date_str: str, db: Session):
 
 @router.post("/launch/bulk")
 def bulk_launch_schedule(doctor_id: str, days: int = Query(7, ge=1, le=30), db: Session = Depends(get_db)):
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(IST).date()  # Use IST date, not UTC
     results = []
     for i in range(days):
         target_date = today + timedelta(days=i)

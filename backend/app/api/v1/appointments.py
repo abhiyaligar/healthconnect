@@ -14,6 +14,7 @@ from app.services.analytics import calculate_doctor_avg
 from app.services.email_service import EmailService
 from app.core.storage import upload_medical_file
 from fastapi import BackgroundTasks
+from app.utils.time_ist import ist_date_str, ist_time_str
 
 router = APIRouter()
 
@@ -108,8 +109,8 @@ def book_appointment(
     # 4. Send Confirmation Email (Background Task)
     email_details = {
         "doctor_name": db_slot.doctor.full_name,
-        "date": db_slot.start_time.strftime("%Y-%m-%d"),
-        "time": db_slot.start_time.strftime("%H:%M"),
+        "date": ist_date_str(db_slot.start_time),
+        "time": ist_time_str(db_slot.start_time),
         "token": queue_token
     }
     # We use current_user.email for the patient who is booking
@@ -154,6 +155,40 @@ def list_all_appointments(page: int = 1, limit: int = 10, db: Session = Depends(
     query = db.query(Appointment).filter(Appointment.status != 'CANCELLED')
     items, total, pages = paginate(query, page, limit)
     return PaginatedResponse(items=items, total=total, page=page, size=limit, pages=pages)
+
+@router.get("/{appointment_id}", response_model=AppointmentOut)
+def get_appointment(
+    appointment_id: UUID,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """Get a single appointment by ID. Accessible by the patient who owns it, their doctor, or admin/receptionist."""
+    appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+
+    role = current_user.user_metadata.get("role", "").lower()
+    user_id = uuid_pkg.UUID(str(current_user.id))
+
+    # Admin & receptionist can view all
+    if role in ["admin", "receptionist"]:
+        return appointment
+
+    # Doctor can view their own appointments
+    if role == "doctor":
+        doctor = db.query(DoctorProfile).filter(DoctorProfile.user_id == user_id).first()
+        if doctor and appointment.slot and appointment.slot.doctor_id == doctor.custom_id:
+            return appointment
+        raise HTTPException(status_code=403, detail="Not authorized to view this appointment")
+
+    # Patient can only view their own appointments
+    patient = db.query(PatientProfile).filter(PatientProfile.user_id == user_id).first()
+    if patient and appointment.patient_id == patient.custom_id:
+        return appointment
+
+    raise HTTPException(status_code=403, detail="Not authorized to view this appointment")
+
+
 
 @router.patch("/{appointment_id}/call", response_model=AppointmentOut)
 def start_consultation(
@@ -205,8 +240,8 @@ def mark_no_show(
     if patient_profile and patient_profile.email:
         email_details = {
             "doctor_name": db_appointment.slot.doctor.full_name if db_appointment.slot and db_appointment.slot.doctor else "Assigned Doctor",
-            "date": db_appointment.slot.start_time.strftime("%Y-%m-%d") if db_appointment.slot else "N/A",
-            "time": db_appointment.slot.start_time.strftime("%H:%M") if db_appointment.slot else "N/A",
+            "date": ist_date_str(db_appointment.slot.start_time) if db_appointment.slot else "N/A",
+            "time": ist_time_str(db_appointment.slot.start_time) if db_appointment.slot else "N/A",
             "reason": "No-show recorded"
         }
         background_tasks.add_task(EmailService.send_appointment_cancellation, patient_profile.email, email_details)
@@ -247,8 +282,8 @@ def cancel_appointment(
     if patient_profile and patient_profile.email:
         email_details = {
             "doctor_name": db_appointment.slot.doctor.full_name if db_appointment.slot and db_appointment.slot.doctor else "Assigned Doctor",
-            "date": db_appointment.slot.start_time.strftime("%Y-%m-%d") if db_appointment.slot else "N/A",
-            "time": db_appointment.slot.start_time.strftime("%H:%M") if db_appointment.slot else "N/A",
+            "date": ist_date_str(db_appointment.slot.start_time) if db_appointment.slot else "N/A",
+            "time": ist_time_str(db_appointment.slot.start_time) if db_appointment.slot else "N/A",
             "reason": "Cancelled by user/staff"
         }
         background_tasks.add_task(EmailService.send_appointment_cancellation, patient_profile.email, email_details)

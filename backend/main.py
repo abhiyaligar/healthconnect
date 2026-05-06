@@ -51,9 +51,19 @@ app.include_router(optimization_router, prefix="/api/v1/optimization", tags=["Op
 app.include_router(emergency_router, prefix="/api/v1/emergency", tags=["Emergency"])
 app.include_router(admin_router, prefix="/api/v1/admin", tags=["Admin"])
 
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
+    "http://localhost:3000",
+    "https://healthconnect-8lzi.vercel.app",
+    "https://healthconnect-psi.vercel.app",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"https://healthconnect.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

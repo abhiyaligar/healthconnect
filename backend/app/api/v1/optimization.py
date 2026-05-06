@@ -7,6 +7,7 @@ from app.api.v1.auth import get_current_user
 from app.models import Appointment, PatientProfile, DoctorProfile
 from app.services.email_service import EmailService
 from fastapi import BackgroundTasks
+from app.utils.time_ist import ist_date_str, ist_time_str
 
 router = APIRouter()
 
@@ -29,7 +30,7 @@ def apply_optimizations(suggestions: List[dict], background_tasks: BackgroundTas
             apt.slot_id = sug["suggested_slot_id"]
             
             # Log Notification
-            msg = f"Good news! A gap has opened up. Your appointment has been moved from {old_slot.start_time.strftime('%H:%M')} to {new_slot.start_time.strftime('%H:%M')}. Please arrive early if possible."
+            msg = f"Good news! A gap has opened up. Your appointment has been moved from {ist_time_str(old_slot.start_time)} to {ist_time_str(new_slot.start_time)}. Please arrive early if possible."
             notif = Notification(
                 patient_id=apt.patient_id,
                 type="COME_EARLY",
@@ -42,9 +43,9 @@ def apply_optimizations(suggestions: List[dict], background_tasks: BackgroundTas
             if patient_profile and patient_profile.email:
                 email_details = {
                     "doctor_name": new_slot.doctor.full_name if new_slot.doctor else "Assigned Doctor",
-                    "date": new_slot.start_time.strftime("%Y-%m-%d"),
-                    "old_time": old_slot.start_time.strftime("%H:%M"),
-                    "new_time": new_slot.start_time.strftime("%H:%M"),
+                    "date": ist_date_str(new_slot.start_time),
+                    "old_time": ist_time_str(old_slot.start_time),
+                    "new_time": ist_time_str(new_slot.start_time),
                 }
                 background_tasks.add_task(EmailService.send_emergency_reschedule, patient_profile.email, email_details)
             

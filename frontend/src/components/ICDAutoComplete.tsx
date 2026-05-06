@@ -3,8 +3,8 @@ import { Search, Loader2 } from 'lucide-react';
 import api from '../api';
 
 interface ICDCode {
-  code: str;
-  description: str;
+  code: string;
+  description: string;
 }
 
 interface Props {

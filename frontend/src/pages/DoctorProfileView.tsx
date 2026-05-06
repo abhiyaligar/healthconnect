@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
+import { toISTShortDate } from '../utils/time';
 
 export default function DoctorProfileView() {
   const { user } = useAuth();
@@ -131,7 +132,7 @@ export default function DoctorProfileView() {
                         <div>
                           <p className="font-bold text-navy-900">Patient ID: {appt.patient_id}</p>
                           <p className="text-xs text-navy-400">
-                            {new Date(appt.actual_end_time).toLocaleDateString()} · {appt.diagnosis || 'General Checkup'}
+                            {toISTShortDate(appt.actual_end_time)} · {appt.diagnosis || 'General Checkup'}
                           </p>
                         </div>
                       </div>

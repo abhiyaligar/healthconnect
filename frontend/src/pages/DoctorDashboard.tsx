@@ -8,6 +8,7 @@ import PrescriptionBuilder from '../components/PrescriptionBuilder';
 import VitalsEntry from '../components/VitalsEntry';
 import ICDAutoComplete from '../components/ICDAutoComplete';
 import MedicalTimeline from '../components/MedicalTimeline';
+import { toISTTime } from '../utils/time';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -273,7 +274,7 @@ export default function DoctorDashboard() {
                 >
                   <div className="flex items-center gap-6">
                     <div className="flex flex-col items-center justify-center w-16">
-                      <span className="text-sm font-bold text-navy-900">{appt.slot ? new Date(appt.slot.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--'}</span>
+                      <span className="text-sm font-bold text-navy-900">{appt.slot ? toISTTime(appt.slot.start_time) : '--'}</span>
                     </div>
                     
                     <div className="flex flex-col">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, Zap, Clock, User, CheckCircle2 } from 'lucide-react';
 import api from '../api';
+import { toISTTime } from '../utils/time';
 
 interface Notification {
   id: string;
@@ -54,7 +55,7 @@ export default function NotificationCenter() {
                   {notif.type.replace('_', ' ')}
                 </span>
                 <span className="text-[10px] font-medium text-navy-400">
-                  {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {toISTTime(notif.created_at)}
                 </span>
               </div>
               <p className="text-xs text-navy-700 leading-relaxed">

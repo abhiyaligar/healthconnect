@@ -6,6 +6,7 @@ import {
 import api from '../api';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/ToastProvider';
+import { toISTTime } from '../utils/time';
 
 export default function WalkinRegistration() {
   const navigate = useNavigate();
@@ -226,7 +227,7 @@ export default function WalkinRegistration() {
                           onClick={() => setSelectedSlot(slot.id)}
                           className={`p-3 rounded-xl border-2 font-bold text-sm transition-all ${selectedSlot === slot.id ? 'border-primary-600 bg-primary-600 text-white' : 'border-navy-50 hover:border-navy-200 text-navy-600'}`}
                         >
-                          {new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {toISTTime(slot.start_time)}
                         </button>
                       ))}
                     </div>

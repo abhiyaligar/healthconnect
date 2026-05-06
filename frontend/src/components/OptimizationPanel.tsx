@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, ArrowRight, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 import api from '../api';
+import { toISTTime } from '../utils/time';
 
 interface Suggestion {
   appointment_id: string;
@@ -88,11 +89,11 @@ export default function OptimizationPanel({ doctorId, onApplied }: Props) {
               <span className="text-xs font-bold text-navy-400">Patient {sug.patient_id.split('-')[0]}</span>
               <div className="flex items-center gap-3 mt-1">
                 <span className="text-sm font-semibold text-navy-900 line-through opacity-40">
-                  {new Date(sug.current_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {toISTTime(sug.current_time)}
                 </span>
                 <ArrowRight size={14} className="text-navy-300" />
                 <span className="text-sm font-bold text-status-open">
-                  {new Date(sug.suggested_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {toISTTime(sug.suggested_time)}
                 </span>
               </div>
             </div>

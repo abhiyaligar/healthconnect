@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, Calendar, ArrowRight, User, Loader2, CheckCircle2, X } from 'lucide-react';
 import api from '../api';
+import { todayIST, toISTTime } from '../utils/time';
 
 interface Props {
   sourceDoctorId: string;
@@ -10,7 +11,7 @@ interface Props {
 
 export default function EmergencyRescheduleModal({ sourceDoctorId, sourceDoctorName, onClose }: Props) {
   const [targetDoctorId, setTargetDoctorId] = useState('');
-  const [targetDate, setTargetDate] = useState(new Date().toISOString().split('T')[0]);
+  const [targetDate, setTargetDate] = useState(todayIST());
   const [doctors, setDoctors] = useState<any[]>([]);
   const [preview, setPreview] = useState<any>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
@@ -31,7 +32,7 @@ export default function EmergencyRescheduleModal({ sourceDoctorId, sourceDoctorN
       const res = await api.get('/emergency/preview', {
         params: {
           source_doctor_id: sourceDoctorId,
-          source_date: new Date().toISOString().split('T')[0],
+          source_date: todayIST(),
           target_doctor_id: targetDoctorId || sourceDoctorId,
           target_date: targetDate
         }
@@ -49,7 +50,7 @@ export default function EmergencyRescheduleModal({ sourceDoctorId, sourceDoctorN
     try {
       await api.post('/emergency/execute', {
         source_doctor_id: sourceDoctorId,
-        source_date: new Date().toISOString().split('T')[0],
+        source_date: todayIST(),
         target_doctor_id: targetDoctorId || sourceDoctorId,
         target_date: targetDate
       });
@@ -154,9 +155,9 @@ export default function EmergencyRescheduleModal({ sourceDoctorId, sourceDoctorN
                     </div>
                     {m.status === 'ALLOCATED' ? (
                       <div className="flex items-center gap-2 text-navy-400">
-                        <span>{new Date(m.original_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span>{toISTTime(m.original_time)}</span>
                         <ArrowRight size={12} />
-                        <span className="font-black text-status-open">{new Date(m.suggested_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="font-black text-status-open">{toISTTime(m.suggested_time)}</span>
                       </div>
                     ) : (
                       <span className="font-black text-status-error uppercase">Needs Manual Re-booking</span>

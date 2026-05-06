@@ -7,6 +7,7 @@ import api from '../api';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Link } from 'react-router-dom';
+import { toISTTime, toISTDate, toISTShortDate } from '../utils/time';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -46,9 +47,12 @@ export default function PatientDashboard() {
     fetchAppointments();
   }, []);
 
-  const upcoming = appointments
+  // IST today date string for comparison
+  const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // YYYY-MM-DD
+
+  const confirmedAppointments = appointments
     .filter(a => a.status === 'CONFIRMED' || a.status === 'IN_PROGRESS')
-    .sort((a, b) => new Date(a.slot.start_time).getTime() - new Date(b.slot.start_time).getTime())[0];
+    .sort((a, b) => new Date(a.slot.start_time).getTime() - new Date(b.slot.start_time).getTime());
 
   const past = appointments
     .filter(a => a.status === 'COMPLETED')
@@ -75,49 +79,150 @@ export default function PatientDashboard() {
         {/* Main Column */}
         <div className="col-span-12 lg:col-span-8 space-y-6">
 
-          {/* Upcoming Appointment Card */}
-          <div className="bg-white rounded-[24px] p-8 border border-navy-100 shadow-skyline relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary-50 rounded-full -mr-16 -mt-16 transition-all group-hover:scale-110" />
-
-            <h3 className="text-xs font-bold text-navy-400 uppercase tracking-widest mb-6 relative">Your Next Consultation</h3>
+          {/* Upcoming Consultations — next 10, grouped by date */}
+          <div className="bg-white rounded-[24px] border border-navy-100 shadow-skyline overflow-hidden">
+            {/* Header */}
+            <div className="px-8 py-6 border-b border-navy-50 flex items-center justify-between bg-gradient-to-r from-primary-50/60 to-white">
+              <div>
+                <h3 className="text-xs font-bold text-navy-400 uppercase tracking-widest mb-0.5">Your Upcoming Consultations</h3>
+                <p className="text-[10px] text-navy-300 font-medium">Next {Math.min(confirmedAppointments.length, 10)} scheduled · IST</p>
+              </div>
+              <Link
+                to="/book"
+                className="flex items-center gap-1.5 text-[11px] font-bold text-primary-600 hover:text-primary-700 bg-primary-50 px-3 py-1.5 rounded-lg border border-primary-100 transition-colors"
+              >
+                <Calendar size={12} /> Book New
+              </Link>
+            </div>
 
             {loading ? (
-              <div className="py-8 text-center text-navy-400">Loading your schedule...</div>
-            ) : upcoming ? (
-              <div className="flex flex-col md:flex-row md:items-center gap-8 relative">
-                <div className="w-20 h-20 rounded-2xl bg-primary-100 flex items-center justify-center shrink-0">
-                  <Calendar size={32} className="text-primary-600" />
+              <div className="py-16 text-center text-navy-400 text-sm">Loading your schedule...</div>
+            ) : confirmedAppointments.length === 0 ? (
+              <div className="py-16 text-center">
+                <div className="w-16 h-16 bg-navy-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Calendar size={28} className="text-navy-300" />
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-1">
-                    <span className="px-2 py-0.5 bg-status-open/10 text-status-open text-[10px] font-black uppercase rounded">
-                      {upcoming.status}
-                    </span>
-                    <span className="text-navy-300 text-xs">Token: {upcoming.queue_token}</span>
-                  </div>
-                  <h2 className="text-2xl font-bold text-navy-900">
-                    {new Date(upcoming.slot.start_time).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                  </h2>
-                  <p className="text-lg text-navy-600 font-medium">
-                    {new Date(upcoming.slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })} with {upcoming.slot.doctor?.full_name || 'Assigned Physician'}
-                  </p>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Link
-                    to={`/appointment/${upcoming.id}`}
-                    className="px-6 py-2.5 bg-navy-900 text-white rounded-lg text-sm font-bold hover:bg-navy-800 transition-all text-center"
-                  >
-                    View Details
-                  </Link>
-                </div>
+                <p className="text-navy-400 font-medium mb-3">No upcoming appointments scheduled.</p>
+                <Link to="/book" className="text-primary-600 font-bold text-sm hover:underline">Schedule one now →</Link>
               </div>
-            ) : (
-              <div className="py-8 text-center">
-                <p className="text-navy-400 font-medium mb-4">No upcoming appointments scheduled.</p>
-                <Link to="/book" className="text-primary-600 font-bold hover:underline">Schedule one now →</Link>
-              </div>
-            )}
+            ) : (() => {
+              // Group next 10 by IST date
+              const next10 = confirmedAppointments.slice(0, 10);
+              const tomorrowStr = new Date(Date.now() + 86400000).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+
+              // Build date-grouped structure
+              const grouped: Record<string, typeof next10> = {};
+              next10.forEach(a => {
+                const dateKey = new Date(a.slot.start_time).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+                if (!grouped[dateKey]) grouped[dateKey] = [];
+                grouped[dateKey].push(a);
+              });
+
+              return (
+                <div className="divide-y divide-navy-50">
+                  {Object.entries(grouped).map(([dateKey, appts]) => {
+                    const isGroupToday = dateKey === todayStr;
+                    const isGroupTomorrow = dateKey === tomorrowStr;
+                    const dateLabel = isGroupToday ? 'Today' : isGroupTomorrow ? 'Tomorrow' : toISTDate(appts[0].slot.start_time);
+
+                    return (
+                      <div key={dateKey}>
+                        {/* Date separator */}
+                        <div className={cn(
+                          'px-8 py-3 flex items-center gap-3',
+                          isGroupToday
+                            ? 'bg-status-open/5 border-b border-status-open/10'
+                            : 'bg-navy-50/60 border-b border-navy-100/60'
+                        )}>
+                          <div className={cn(
+                            'w-2 h-2 rounded-full',
+                            isGroupToday ? 'bg-status-open' : 'bg-navy-300'
+                          )} />
+                          <span className={cn(
+                            'text-[11px] font-black uppercase tracking-widest',
+                            isGroupToday ? 'text-status-open' : 'text-navy-500'
+                          )}>
+                            {dateLabel}
+                          </span>
+                          {isGroupToday && (
+                            <span className="text-[9px] font-bold text-status-open bg-status-open/10 px-2 py-0.5 rounded-full animate-pulse">
+                              Live
+                            </span>
+                          )}
+                          <span className="ml-auto text-[10px] font-medium text-navy-400">
+                            {appts.length} appointment{appts.length > 1 ? 's' : ''}
+                          </span>
+                        </div>
+
+                        {/* Appointments for this date */}
+                        {appts.map((apt, idx) => {
+                          const aptIsToday = isGroupToday;
+                          return (
+                            <Link
+                              key={apt.id}
+                              to={`/appointment/${apt.id}`}
+                              className="flex items-center gap-4 px-8 py-4 hover:bg-navy-50/40 transition-colors group/row"
+                            >
+                              {/* Time block */}
+                              <div className={cn(
+                                'w-16 text-center shrink-0 py-2 rounded-xl',
+                                aptIsToday ? 'bg-status-open/10' : 'bg-primary-50'
+                              )}>
+                                <p className={cn(
+                                  'text-sm font-black leading-none',
+                                  aptIsToday ? 'text-status-open' : 'text-primary-700'
+                                )}>
+                                  {toISTTime(apt.slot.start_time).split(' ')[0]}
+                                </p>
+                                <p className={cn(
+                                  'text-[9px] font-bold mt-0.5',
+                                  aptIsToday ? 'text-status-open/70' : 'text-primary-400'
+                                )}>
+                                  {toISTTime(apt.slot.start_time).split(' ')[1]}
+                                </p>
+                              </div>
+
+                              {/* Doctor info */}
+                              <div className="flex-1 min-w-0">
+                                <p className="font-bold text-navy-900 text-sm truncate">
+                                  {apt.slot.doctor?.full_name || 'Assigned Physician'}
+                                </p>
+                                <p className="text-xs text-navy-400 mt-0.5">
+                                  {apt.slot.doctor?.specialty || 'General'} · Token {apt.queue_token}
+                                </p>
+                              </div>
+
+                              {/* Status badge */}
+                              <div className="flex items-center gap-3 shrink-0">
+                                <span className={cn(
+                                  'px-2 py-0.5 text-[9px] font-black uppercase rounded-md',
+                                  apt.status === 'IN_PROGRESS'
+                                    ? 'bg-status-warning/10 text-status-warning'
+                                    : 'bg-status-open/10 text-status-open'
+                                )}>
+                                  {apt.status === 'IN_PROGRESS' ? 'In Progress' : apt.status}
+                                </span>
+                                <ChevronRight size={16} className="text-navy-200 group-hover/row:text-navy-500 transition-colors" />
+                              </div>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+
+                  {confirmedAppointments.length > 10 && (
+                    <div className="px-8 py-4 text-center">
+                      <p className="text-xs text-navy-400 font-medium">
+                        +{confirmedAppointments.length - 10} more appointments not shown
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
+
 
           {/* Past Appointments List */}
           <div className="bg-white rounded-[24px] border border-navy-100 shadow-skyline overflow-hidden">
@@ -140,7 +245,7 @@ export default function PatientDashboard() {
                       </div>
                       <div>
                         <p className="font-bold text-navy-900">{apt.slot.doctor?.full_name || 'Assigned Physician'}</p>
-                        <p className="text-xs text-navy-400">{new Date(apt.slot.start_time).toLocaleDateString()} · {apt.slot.doctor?.specialty || 'General'}</p>
+                        <p className="text-xs text-navy-400">{toISTShortDate(apt.slot.start_time)} · {apt.slot.doctor?.specialty || 'General'}</p>
                       </div>
                     </div>
                     <ChevronRight size={20} className="text-navy-300" />

@@ -6,6 +6,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import api from '../api';
+import { toISTTime, toISTDate } from '../utils/time';
 
 interface Appointment {
   id: string;
@@ -112,10 +113,10 @@ export default function AppointmentDetails() {
               <span className="text-navy-300 text-xs font-bold uppercase tracking-widest">Token: {appointment.queue_token}</span>
             </div>
             <h1 className="text-3xl font-black text-navy-900 tracking-tight">
-              {new Date(appointment.slot.start_time).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+              {toISTDate(appointment.slot.start_time)}
             </h1>
             <p className="text-navy-500 font-medium flex items-center gap-2">
-              <Clock size={16} /> {new Date(appointment.slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} with {appointment.slot.doctor.full_name}
+              <Clock size={16} /> {toISTTime(appointment.slot.start_time)} with {appointment.slot.doctor.full_name}
             </p>
           </div>
         </div>

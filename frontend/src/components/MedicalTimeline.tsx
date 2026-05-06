@@ -1,6 +1,7 @@
 import React from 'react';
 import { Calendar, User, Activity, FileText, Pill, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
+import { toISTDate } from '../utils/time';
 
 interface PrescriptionItem {
   medicine_name: string;
@@ -53,7 +54,7 @@ export default function MedicalTimeline({ history }: Props) {
                 <div>
                   <div className="flex items-center gap-3 mb-1">
                     <span className="text-sm font-black text-navy-900">
-                      {new Date(appt.actual_end_time).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}
+                      {toISTDate(appt.actual_end_time)}
                     </span>
                     <span className="px-2 py-0.5 bg-primary-50 text-primary-600 rounded text-[10px] font-bold uppercase">
                       Consultation
