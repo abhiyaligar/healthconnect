@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import PrescriptionBuilder from '../components/PrescriptionBuilder';
 import VitalsEntry from '../components/VitalsEntry';
 import ICDAutoComplete from '../components/ICDAutoComplete';
+import MedicalTimeline from '../components/MedicalTimeline';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -42,6 +43,7 @@ export default function DoctorDashboard() {
   const [selectedPatient, setSelectedPatient] = useState<Appointment | null>(null);
   const [profile, setProfile] = useState<DoctorProfile | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [patientHistory, setPatientHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState({ diagnosis: '', clinical_notes: '' });
   const [isConsulting, setIsConsulting] = useState(false);
@@ -119,6 +121,20 @@ export default function DoctorDashboard() {
     };
     fetchData();
   }, []);
+
+  useEffect(() => {
+    const fetchPatientHistory = async () => {
+      if (selectedPatient?.patient_id) {
+        try {
+          const res = await api.get(`/history/${selectedPatient.patient_id}`);
+          setPatientHistory(res.data);
+        } catch (err) {
+          console.error('Failed to fetch patient history');
+        }
+      }
+    };
+    fetchPatientHistory();
+  }, [selectedPatient]);
 
   const handleStartConsultation = async (apptId: string) => {
     try {
@@ -431,7 +447,7 @@ export default function DoctorDashboard() {
             <div className="flex-1 overflow-auto p-6 bg-surface">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 
-                {/* Left Column: Demographics & History */}
+                {/* Left Column: Demographics & Meds */}
                 <div className="space-y-6">
                   <div className="bg-white p-5 border border-navy-100 rounded-xl shadow-sm">
                     <h3 className="text-sm font-bold text-navy-900 mb-4 border-b border-navy-100 pb-2">Demographics</h3>
@@ -441,14 +457,6 @@ export default function DoctorDashboard() {
                       <div className="flex justify-between"><span className="text-navy-500">Blood Type:</span> <span className="font-medium text-status-error">O+</span></div>
                       <div className="flex justify-between"><span className="text-navy-500">Weight:</span> <span className="font-medium text-navy-900">185 lbs</span></div>
                     </div>
-                  </div>
-
-                  <div className="bg-white p-5 border border-navy-100 rounded-xl shadow-sm">
-                    <h3 className="text-sm font-bold text-navy-900 mb-4 border-b border-navy-100 pb-2">Active Problems</h3>
-                    <ul className="space-y-2 text-sm">
-                      <li className="flex items-center gap-2 text-navy-800"><span className="w-1.5 h-1.5 rounded-full bg-status-warning" /> Hypertension (I10)</li>
-                      <li className="flex items-center gap-2 text-navy-800"><span className="w-1.5 h-1.5 rounded-full bg-status-warning" /> Type 2 Diabetes (E11.9)</li>
-                    </ul>
                   </div>
 
                   <div className="bg-white p-5 border border-navy-100 rounded-xl shadow-sm">
@@ -466,60 +474,28 @@ export default function DoctorDashboard() {
                   </div>
                 </div>
 
-                {/* Right Column: Past Visits & Clinical Notes */}
+                {/* Center/Right Column: Timeline & History */}
                 <div className="md:col-span-2 space-y-6">
+                  <div className="bg-white p-8 border border-navy-100 rounded-xl shadow-sm">
+                    <h3 className="text-sm font-bold text-navy-900 mb-8 flex items-center gap-2">
+                      <Activity size={18} className="text-primary-600" /> Longitudinal Clinical Timeline
+                    </h3>
+                    <MedicalTimeline history={patientHistory} />
+                  </div>
+
                   <div className="bg-white p-5 border border-navy-100 rounded-xl shadow-sm">
                     <h3 className="text-sm font-bold text-navy-900 mb-4 flex items-center gap-2"><Clock size={16} className="text-primary-600"/> Encounter History</h3>
-                    
                     <div className="space-y-4">
-                      {/* Past Visit 1 */}
+                      {/* Placeholder past visits */}
                       <div className="p-4 bg-navy-50 rounded-lg border border-navy-100">
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-bold text-navy-900 text-sm">Follow-up Consultation</span>
                           <span className="text-xs font-bold text-navy-400 bg-white px-2 py-1 rounded border border-navy-100">Oct 14, 2025</span>
                         </div>
-                        <p className="text-sm text-navy-700 mb-2">Patient reported feeling dizzy in the mornings. Adjusted Lisinopril dosage. Blood pressure was slightly elevated.</p>
-                        <div className="flex gap-2 text-[10px] font-bold text-navy-500 uppercase">
-                          <span className="px-2 py-0.5 bg-white rounded border border-navy-200">BP: 135/85</span>
-                          <span className="px-2 py-0.5 bg-white rounded border border-navy-200">HR: 72</span>
-                        </div>
-                      </div>
-
-                      {/* Past Visit 2 */}
-                      <div className="p-4 bg-navy-50 rounded-lg border border-navy-100">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-bold text-navy-900 text-sm">Annual Wellness Visit</span>
-                          <span className="text-xs font-bold text-navy-400 bg-white px-2 py-1 rounded border border-navy-100">Mar 02, 2025</span>
-                        </div>
-                        <p className="text-sm text-navy-700 mb-2">Routine checkup. Labs drawn. A1C improved to 6.8%. Patient advised to continue current diet and exercise regimen.</p>
-                        <div className="flex gap-2 text-[10px] font-bold text-navy-500 uppercase">
-                          <span className="px-2 py-0.5 bg-white rounded border border-navy-200">Labs Normal</span>
-                          <span className="px-2 py-0.5 bg-white rounded border border-navy-200">Weight: 188 lbs</span>
-                        </div>
+                        <p className="text-sm text-navy-700 mb-2">Patient reported feeling dizzy in the mornings. Adjusted Lisinopril dosage.</p>
                       </div>
                     </div>
                   </div>
-
-                  <div className="bg-white p-5 border border-navy-100 rounded-xl shadow-sm">
-                    <h3 className="text-sm font-bold text-navy-900 mb-4">Diagnostic Reports</h3>
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <div className="flex-1 p-3 border border-navy-100 rounded-lg flex items-center justify-between hover:bg-navy-50 cursor-pointer transition-colors">
-                        <div className="flex items-center gap-2">
-                          <FileText size={16} className="text-status-open" />
-                          <span className="text-sm font-bold text-navy-800">CBC Panel</span>
-                        </div>
-                        <span className="text-[10px] text-navy-400">Mar 02</span>
-                      </div>
-                      <div className="flex-1 p-3 border border-navy-100 rounded-lg flex items-center justify-between hover:bg-navy-50 cursor-pointer transition-colors">
-                        <div className="flex items-center gap-2">
-                          <FileText size={16} className="text-primary-600" />
-                          <span className="text-sm font-bold text-navy-800">ECG Results</span>
-                        </div>
-                        <span className="text-[10px] text-navy-400">Oct 14</span>
-                      </div>
-                    </div>
-                  </div>
-
                 </div>
               </div>
             </div>

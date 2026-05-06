@@ -7,5 +7,6 @@ from app.models.record import MedicalRecord
 from app.models.availability import DoctorAvailability
 from app.models.vitals import Vitals
 from app.models.prescription import Prescription, PrescriptionItem
+from app.models.notification import Notification
 
-__all__ = ["Base", "Slot", "Appointment", "DoctorProfile", "PatientProfile", "MedicalRecord", "DoctorAvailability", "Vitals", "Prescription", "PrescriptionItem"]
+__all__ = ["Base", "Slot", "Appointment", "DoctorProfile", "PatientProfile", "MedicalRecord", "DoctorAvailability", "Vitals", "Prescription", "PrescriptionItem", "Notification"]

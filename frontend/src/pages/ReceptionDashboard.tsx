@@ -9,32 +9,67 @@ function cn(...inputs: ClassValue[]) {
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import OptimizationPanel from '../components/OptimizationPanel';
+import NotificationCenter from '../components/NotificationCenter';
 
 export default function ReceptionDashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState<any>(null);
+  const [surgeStatus, setSurgeStatus] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedDocForOpt, setSelectedDocForOpt] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       try {
-        const res = await api.get('/analytics/dashboard');
-        setStats(res.data);
+        const [statsRes, surgeRes] = await Promise.all([
+          api.get('/analytics/dashboard'),
+          api.get('/analytics/surge-status')
+        ]);
+        setStats(statsRes.data);
+        setSurgeStatus(surgeRes.data);
       } catch (err) {
-        console.error('Failed to fetch dashboard stats');
+        console.error('Failed to fetch dashboard data');
       } finally {
         setLoading(false);
       }
     };
-    fetchStats();
-    const interval = setInterval(fetchStats, 30000); // Update every 30s
+    fetchData();
+    const interval = setInterval(fetchData, 30000); // Update every 30s
     return () => clearInterval(interval);
   }, []);
 
   if (loading || !stats) return <div className="p-20 text-center text-navy-400">Initializing Live Dashboard...</div>;
 
   return (
-    <div className="grid grid-cols-12 gap-6">
+    <div className="space-y-6">
+      
+      {/* Storm Alert Banner */}
+      {surgeStatus?.is_storm && (
+        <div className="bg-status-error/10 border-2 border-status-error/20 p-6 rounded-[24px] flex flex-col md:flex-row items-center justify-between gap-6 animate-pulse">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-status-error text-white rounded-2xl flex items-center justify-center shadow-lg shadow-status-error/20">
+              <AlertTriangle size={24} />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-status-error">CANCELLATION STORM DETECTED</h2>
+              <p className="text-sm font-bold text-navy-600 uppercase tracking-wider">{surgeStatus.message}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+             <div className="bg-white px-4 py-2 rounded-xl border border-navy-100 flex flex-col items-center">
+               <span className="text-xs font-bold text-navy-400">Velocity</span>
+               <span className="text-lg font-black text-navy-900">{surgeStatus.cancellation_velocity} / 30m</span>
+             </div>
+             <div className="bg-white px-4 py-2 rounded-xl border border-navy-100 flex flex-col items-center">
+               <span className="text-xs font-bold text-navy-400">Gaps</span>
+               <span className="text-lg font-black text-navy-900">{surgeStatus.gap_percentage}%</span>
+             </div>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-12 gap-6">
       
       {/* Card 1: Live Queue Status */}
       <div className="col-span-12 lg:col-span-4 md:col-span-6 bg-surface rounded-[24px] p-6 sm:p-8 shadow-skyline border border-navy-100">
@@ -141,19 +176,9 @@ export default function ReceptionDashboard() {
         </div>
       </div>
 
-      {/* Card 5: Self-Stabilization */}
-      <div className="col-span-12 lg:col-span-3 md:col-span-6 bg-surface rounded-[24px] p-6 sm:p-8 shadow-skyline border border-navy-100">
-        <h3 className="text-xs font-bold text-navy-400 uppercase tracking-widest mb-4">Self-Stabilization</h3>
-        <div className="flex items-baseline gap-2">
-          <span className="text-[48px] font-black tracking-tighter text-navy-900 leading-none">98<span className="text-2xl">%</span></span>
-        </div>
-        <div className="mt-4 flex items-center gap-2 text-xs font-bold text-navy-500">
-          <Zap size={14} className="text-status-open fill-status-open" /> Optimized Load
-        </div>
-        <div className="mt-6 bg-navy-50 p-3 rounded-xl">
-            <p className="text-[10px] text-navy-400 font-bold">LATEST STATUS</p>
-            <p className="text-xs font-bold text-navy-700 mt-1">Steady State flow</p>
-        </div>
+      {/* Card 5: System Alerts Log */}
+      <div className="col-span-12 lg:col-span-3 md:col-span-6 h-[400px]">
+        <NotificationCenter />
       </div>
 
       {/* Card 6: Staff Duty Forecast */}
@@ -167,15 +192,33 @@ export default function ReceptionDashboard() {
         </div>
         <div className="space-y-6">
             {stats.workload.map((d: any) => (
-                <div key={d.name} className="space-y-2">
-                    <div className="flex justify-between text-xs font-bold text-navy-700">
+                <div key={d.name} className="group">
+                    <div className="flex justify-between items-center text-xs font-bold text-navy-700 mb-2">
                         <span>{d.name}</span>
-                        <span>{d.capacity}% Capacity ({d.current}/{d.total})</span>
+                        <div className="flex items-center gap-3">
+                          <span className={cn(
+                            "px-2 py-0.5 rounded",
+                            d.capacity > 85 ? "bg-status-error/10 text-status-error" : "text-navy-400"
+                          )}>
+                            {d.capacity}% Capacity ({d.current}/{d.total})
+                          </span>
+                          <button 
+                            onClick={() => setSelectedDocForOpt(selectedDocForOpt === d.name ? null : d.name)}
+                            className="text-primary-600 hover:underline"
+                          >
+                            {selectedDocForOpt === d.name ? 'Hide Opt' : 'Optimize'}
+                          </button>
+                        </div>
                     </div>
                     <div className="h-6 flex gap-1 items-center">
                         <div className="h-full bg-primary-500 rounded-lg shadow-sm transition-all duration-1000" style={{ width: `${d.capacity}%` }} />
                         <div className="flex-1 h-px bg-navy-100 border-t border-dashed" />
                     </div>
+                    {selectedDocForOpt === d.name && (
+                      <div className="mt-4 animate-in slide-in-from-top-4 duration-300">
+                         <OptimizationPanel doctorId={d.name} onApplied={() => {}} />
+                      </div>
+                    )}
                 </div>
             ))}
         </div>
@@ -211,5 +254,6 @@ export default function ReceptionDashboard() {
       </div>
 
     </div>
-  );
+  </div>
+);
 }

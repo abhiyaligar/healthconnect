@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
   Calendar, Clock, User, FileText, CheckCircle, 
-  AlertCircle, ArrowRight, Activity, Bell
+  AlertCircle, ArrowRight, Activity, Bell, ChevronRight, CheckCircle2
 } from 'lucide-react';
 import api from '../api';
 import { clsx, type ClassValue } from 'clsx';
@@ -130,20 +130,21 @@ export default function PatientDashboard() {
                 <div className="p-12 text-center text-navy-400">No past medical visits found.</div>
               ) : (
                 past.map((apt) => (
-                  <div key={apt.id} className="p-6 flex items-center justify-between hover:bg-navy-50/50 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-navy-100 flex items-center justify-center text-navy-500">
-                        <CheckCircle size={18} />
+                    <Link 
+                      to={`/appointment/${apt.id}`}
+                      className="p-6 flex items-center justify-between hover:bg-navy-50/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-navy-100 flex items-center justify-center text-navy-500">
+                          <CheckCircle2 size={18} />
+                        </div>
+                        <div>
+                          <p className="font-bold text-navy-900">{apt.slot.doctor?.full_name || 'Assigned Physician'}</p>
+                          <p className="text-xs text-navy-400">{new Date(apt.slot.start_time).toLocaleDateString()} · {apt.slot.doctor?.specialty || 'General'}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-bold text-navy-900">{apt.slot.doctor?.full_name || 'Assigned Physician'}</p>
-                        <p className="text-xs text-navy-400">{new Date(apt.slot.start_time).toLocaleDateString()} · {apt.slot.doctor?.specialty || 'General'}</p>
-                      </div>
-                    </div>
-                    <button className="p-2 text-navy-300 hover:text-primary-600 transition-colors">
-                      <FileText size={20} />
-                    </button>
-                  </div>
+                      <ChevronRight size={20} className="text-navy-300" />
+                    </Link>
                 ))
               )}
             </div>

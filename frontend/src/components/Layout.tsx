@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, AlertTriangle, CalendarDays, BarChart2,
-  Bell, X, Zap, CalendarPlus, Stethoscope, ShieldCheck, LogOut, Menu
+  Bell, X, Zap, CalendarPlus, Stethoscope, ShieldCheck, LogOut, Menu, User
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -20,10 +20,12 @@ const navConfig: Record<Role, NavItem[]> = {
   patient: [
     { name: 'Dashboard',        path: '/dashboard', icon: LayoutDashboard },
     { name: 'Book Appointment', path: '/book',      icon: CalendarPlus },
+    { name: 'My Profile',       path: '/patient/profile', icon: User },
   ],
   doctor: [
     { name: 'My Schedule',     path: '/doctors',   icon: Stethoscope  },
     { name: 'Scheduling',      path: '/scheduling',icon: CalendarDays },
+    { name: 'Professional Profile', path: '/doctor/profile', icon: User },
   ],
   receptionist: [
     { name: 'Dashboard',       path: '/reception', icon: LayoutDashboard },

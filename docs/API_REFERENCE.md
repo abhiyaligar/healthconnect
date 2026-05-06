@@ -12,6 +12,7 @@ Creates a new user and initializes their profile.
 - `PATCH /api/v1/appointments/{id}/call`: Start session.
 - `PATCH /api/v1/appointments/{id}/clinical-notes`: Update diagnosis and notes (Doctor only).
 - `PATCH /api/v1/appointments/{id}/complete`: End session and update analytics.
+- `POST /api/v1/appointments/{id}/rate`: Submit patient rating and feedback.
 
 ### Clinical Data Management
 - `POST /api/v1/clinical/vitals`: Record vitals (BP, SpO2, Heart Rate, etc).
@@ -32,6 +33,12 @@ Returns a chronological list of all **completed** appointments and their notes.
 
 ### `GET /api/v1/history/{patient_id}/records`
 Returns a list of all medical records/files ever uploaded for this patient.
+
+### `GET /api/v1/history/me/full`
+Returns the full clinical timeline for the logged-in patient (Vitals, Prescriptions, Notes).
+
+### `GET /api/v1/history/doctor/me`
+Returns the consultation archive for the logged-in doctor.
 
 ## Scheduling & Slots
 
@@ -57,6 +64,15 @@ Returns a list of active scheduling conflicts with fairness-based priority score
 
 ### `GET /api/v1/analytics/admin/overview`
 Returns system-wide intelligence: KPIs, hourly booking trends, and doctor workload distribution (Admin only).
+
+### `GET /api/v1/analytics/surge-status`
+Returns "Storm Detection" status, cancellation velocity, and schedule gap percentage.
+
+## Optimization & Batch
+- `GET /api/v1/optimization/suggestions/{doctor_id}`: Get "Gap Compaction" suggestions.
+- `POST /api/v1/optimization/apply`: Bulk apply schedule compaction and send alerts.
+- `GET /api/v1/optimization/notifications`: Get live log of system alerts.
+- `POST /api/v1/appointments/batch-reschedule`: Emergency tool to move multiple appointments.
 
 ## Profiles
 - `GET /api/v1/doctors/`: List doctors with live performance averages.

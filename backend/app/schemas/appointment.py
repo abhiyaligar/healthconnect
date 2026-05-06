@@ -3,6 +3,8 @@ from uuid import UUID
 from datetime import datetime
 from typing import Optional
 from app.schemas.slot import SlotOut
+from app.schemas.clinical import VitalsOut, PrescriptionOut
+from typing import List
 
 class AppointmentBase(BaseModel):
     slot_id: UUID
@@ -32,6 +34,10 @@ class AppointmentOut(AppointmentBase):
     clinical_notes: Optional[str] = None
     diagnosis: Optional[str] = None
     slot: Optional[SlotOut] = None
+    vitals: List[VitalsOut] = []
+    prescriptions: List[PrescriptionOut] = []
+    rating: Optional[int] = None
+    feedback: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 class MedicalRecordOut(BaseModel):

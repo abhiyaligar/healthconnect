@@ -14,6 +14,9 @@ import ScheduleManager from './pages/ScheduleManager';
 import PatientDashboard from './pages/PatientDashboard';
 import WalkinRegistration from './pages/WalkinRegistration';
 import ConflictResolution from './pages/ConflictResolution';
+import PatientProfileView from './pages/PatientProfileView';
+import DoctorProfileView from './pages/DoctorProfileView';
+import AppointmentDetails from './pages/AppointmentDetails';
 
 function AppRoutes() {
   const { isLoggedIn, role } = useAuth();
@@ -61,9 +64,24 @@ function AppRoutes() {
                   <PatientBooking />
                 </ProtectedRoute>
               } />
+              <Route path="appointment/:id" element={
+                <ProtectedRoute allowedRoles={['patient']}>
+                  <AppointmentDetails />
+                </ProtectedRoute>
+              } />
+              <Route path="patient/profile" element={
+                <ProtectedRoute allowedRoles={['patient']}>
+                  <PatientProfileView />
+                </ProtectedRoute>
+              } />
               <Route path="doctors" element={
                 <ProtectedRoute allowedRoles={['doctor']}>
                   <DoctorDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="doctor/profile" element={
+                <ProtectedRoute allowedRoles={['doctor']}>
+                  <DoctorProfileView />
                 </ProtectedRoute>
               } />
               <Route path="queue" element={

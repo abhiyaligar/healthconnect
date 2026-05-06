@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Dict
 from uuid import UUID
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 import uuid as uuid_pkg
 from app.core.database import get_db
 from app.models import Appointment, Slot, PatientProfile, MedicalRecord, DoctorProfile
@@ -25,8 +25,23 @@ def book_appointment(
     if not db_slot:
         raise HTTPException(status_code=404, detail="Slot not found")
     
-    if db_slot.status == "CLOSED":
-        raise HTTPException(status_code=400, detail="Slot is closed")
+    # Overbooking check
+    active_count = db.query(Appointment).filter(Appointment.slot_id == appointment.slot_id, Appointment.status != "CANCELLED").count()
+    
+    if active_count >= db_slot.max_capacity:
+        # Check for Fatigue/Storm Protection
+        surge_res = db.query(Appointment).join(Slot).filter(
+            Slot.doctor_id == db_slot.doctor_id,
+            func.date(Slot.start_time) == date.today(),
+            Appointment.status != "CANCELLED"
+        ).count()
+        
+        if surge_res > 15: # Fatigue threshold
+            raise HTTPException(status_code=400, detail="Doctor is currently over-capacity. Overbooking disabled for safety.")
+        
+        # If not fatigued, allow 1 extra spot for overbooking
+        if active_count >= db_slot.max_capacity + 1:
+            raise HTTPException(status_code=400, detail="Slot is at maximum overbooking capacity")
 
     # If receptionist/admin is booking for a patient
     role = current_user.user_metadata.get("role", "").lower()
@@ -54,8 +69,9 @@ def book_appointment(
         wait_start_time=datetime.now(timezone.utc)
     )
     
-    # Close the slot once booked (since capacity is 1)
-    db_slot.status = "CLOSED"
+    # Update slot status if capacity is reached
+    if active_count + 1 >= db_slot.max_capacity:
+        db_slot.status = "CLOSED"
     
     db.add(db_appointment)
     db.commit()
@@ -215,3 +231,54 @@ async def upload_record(
     db.commit()
     db.refresh(db_record)
     return db_record
+
+@router.post("/batch-reschedule")
+def batch_reschedule(
+    mapping: Dict[str, str], # appointment_id -> new_slot_id
+    db: Session = Depends(get_db)
+):
+    updated = 0
+    for apt_id, slot_id in mapping.items():
+        apt = db.query(Appointment).filter(Appointment.id == apt_id).first()
+        if apt:
+            # Re-open old slot if it was CLOSED
+            if apt.slot:
+                apt.slot.status = "OPEN"
+            
+            apt.slot_id = slot_id
+            apt.reschedule_count += 1
+            
+            # Close new slot
+            new_slot = db.query(Slot).filter(Slot.id == slot_id).first()
+            if new_slot:
+                new_slot.status = "CLOSED"
+                
+            updated += 1
+    
+    db.commit()
+    return {"message": f"Successfully rescheduled {updated} appointments.", "count": updated}
+
+@router.post("/{appointment_id}/rate")
+def rate_appointment(
+    appointment_id: UUID,
+    rating: int,
+    feedback: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+        
+    # Security check: Only the patient who booked it can rate
+    profile = db.query(PatientProfile).filter(PatientProfile.user_id == str(current_user.id)).first()
+    if not profile or str(appointment.patient_id) != str(profile.custom_id):
+         raise HTTPException(status_code=403, detail="You can only rate your own appointments")
+         
+    if appointment.status != "COMPLETED":
+        raise HTTPException(status_code=400, detail="Can only rate completed appointments")
+        
+    appointment.rating = rating
+    appointment.feedback = feedback
+    db.commit()
+    return {"message": "Rating submitted successfully"}

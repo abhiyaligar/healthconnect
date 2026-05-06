@@ -60,3 +60,43 @@ def get_patient_records(
         .all()
     )
     return records
+
+@router.get("/me/full", response_model=List[AppointmentOut])
+def get_my_full_history(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    profile = db.query(PatientProfile).filter(PatientProfile.user_id == str(current_user.id)).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Patient profile not found")
+        
+    return (
+        db.query(Appointment)
+        .filter(Appointment.patient_id == profile.custom_id)
+        .order_by(Appointment.actual_end_time.desc())
+        .all()
+    )
+
+@router.get("/doctor/me", response_model=List[AppointmentOut])
+def get_doctor_consultation_history(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    from app.models import Slot
+    role = current_user.user_metadata.get("role")
+    if role != "DOCTOR":
+        raise HTTPException(status_code=403, detail="Only doctors can access this")
+        
+    # Find doctor custom_id
+    from app.models import DoctorProfile
+    doc = db.query(DoctorProfile).filter(DoctorProfile.user_id == str(current_user.id)).first()
+    if not doc:
+        return []
+        
+    return (
+        db.query(Appointment)
+        .join(Slot)
+        .filter(Slot.doctor_id == doc.custom_id, Appointment.status == "COMPLETED")
+        .order_by(Appointment.actual_end_time.desc())
+        .all()
+    )

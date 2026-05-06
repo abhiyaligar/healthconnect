@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Integer, ForeignKey, Text
+from sqlalchemy import Column, String, DateTime, Integer, ForeignKey, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 import uuid
@@ -21,6 +21,11 @@ class Appointment(Base):
     actual_start_time = Column(DateTime(timezone=True), nullable=True)
     actual_end_time = Column(DateTime(timezone=True), nullable=True)
     consultation_duration = Column(Integer, nullable=True)  # in minutes
+    status_changed_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
+    
+    # Rating & Feedback
+    rating = Column(Integer, nullable=True) # 1-5 stars
+    feedback = Column(Text, nullable=True)
 
     # Clinical fields
     clinical_notes = Column(Text, nullable=True)

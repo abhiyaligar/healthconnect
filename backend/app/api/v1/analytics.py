@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone, date, timedelta
 from app.core.database import get_db
 from app.models import Appointment, Slot, DoctorProfile, PatientProfile
 from typing import List, Dict
@@ -227,4 +227,41 @@ def get_admin_overview(db: Session = Depends(get_db)):
         "hourly_data": hourly_data,
         "doctor_load": doctor_load,
         "alerts": recent_events
+    }
+@router.get("/surge-status")
+def get_surge_status(db: Session = Depends(get_db)):
+    today = date.today()
+    now = datetime.now(timezone.utc)
+    half_hour_ago = now - timedelta(minutes=30)
+    
+    # 1. Cancellation Velocity (Last 30 mins)
+    cancellations_recent = db.query(Appointment).join(Slot).filter(
+        func.date(Slot.start_time) == today,
+        Appointment.status == "CANCELLED",
+        Appointment.status_changed_at >= half_hour_ago
+    ).count()
+    
+    # 2. Total Gaps (Cancelled slots with no other active appointments)
+    # This is a bit complex, let's simplify: percentage of cancelled appointments today
+    total_active = db.query(Appointment).join(Slot).filter(
+        func.date(Slot.start_time) == today,
+        Appointment.status != "CANCELLED"
+    ).count()
+    
+    total_cancelled = db.query(Appointment).join(Slot).filter(
+        func.date(Slot.start_time) == today,
+        Appointment.status == "CANCELLED"
+    ).count()
+    
+    gap_pct = (total_cancelled / (total_active + total_cancelled) * 100) if (total_active + total_cancelled) > 0 else 0
+    
+    # 3. Decision Logic
+    is_storm = cancellations_recent >= 5 or gap_pct >= 20
+    
+    return {
+        "is_storm": is_storm,
+        "cancellation_velocity": cancellations_recent, # per 30 mins
+        "gap_percentage": int(gap_pct),
+        "recommendation": "TRIGGER_COMPACTION" if is_storm else "STABLE",
+        "message": "High cancellation volume detected. Consider compacting the schedule." if is_storm else "Schedule is stable."
     }
