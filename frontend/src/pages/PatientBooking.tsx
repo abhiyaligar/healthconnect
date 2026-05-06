@@ -45,6 +45,7 @@ export default function PatientBooking() {
   const [loading, setLoading] = useState(false);
   const [bookingResult, setBookingResult] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [specialtySearch, setSpecialtySearch] = useState('');
 
   useEffect(() => {
     const fetchDoctors = async () => {
@@ -70,9 +71,18 @@ export default function PatientBooking() {
     }
   };
 
-  const handleSpecialtySelect = (spec: string) => {
+  const handleSpecialtySelect = async (spec: string) => {
     setSelectedSpecialty(spec);
-    setStep(2);
+    setLoading(true);
+    try {
+      const res = await api.get(`/doctors/recommend?specialty=${spec}`);
+      setDoctors(res.data);
+      setStep(2);
+    } catch (err) {
+      console.error('Failed to fetch recommended doctors');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDoctorSelect = (doc: Doctor) => {
@@ -155,9 +165,22 @@ export default function PatientBooking() {
           {/* STEP 1: SPECIALTY */}
           {step === 1 && (
             <div>
-              <h2 className="text-2xl font-bold text-navy-900 mb-6">Select a Specialty</h2>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <h2 className="text-2xl font-bold text-navy-900">Select a Specialty</h2>
+                <div className="relative w-full md:w-64">
+                  <input 
+                    type="text" 
+                    placeholder="Search specialty..."
+                    value={specialtySearch}
+                    onChange={(e) => setSpecialtySearch(e.target.value)}
+                    className="w-full pl-4 pr-10 py-2 bg-navy-50 border border-navy-100 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20"
+                  />
+                </div>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {uniqueSpecialties.map((spec) => {
+                {uniqueSpecialties
+                  .filter(s => s.toLowerCase().includes(specialtySearch.toLowerCase()))
+                  .map((spec) => {
                   const Icon = specialtyIcons[spec] || Stethoscope;
                   return (
                     <div key={spec} onClick={() => handleSpecialtySelect(spec)} className="group p-6 rounded-xl border border-navy-100 hover:border-primary-300 hover:bg-navy-50 cursor-pointer flex items-start gap-4">
@@ -176,19 +199,36 @@ export default function PatientBooking() {
             <div>
               <h2 className="text-2xl font-bold text-navy-900 mb-6">Available {selectedSpecialty} Specialists</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {doctors.filter(d => d.specialty === selectedSpecialty).map((doc) => (
-                  <div key={doc.custom_id} className="p-6 rounded-xl border border-navy-100 flex flex-col justify-between">
+                {doctors.map((doc: any, index) => (
+                  <div key={doc.custom_id} className={cn(
+                    "p-6 rounded-xl border flex flex-col justify-between relative",
+                    index === 0 ? "border-primary-500 bg-primary-50/30" : "border-navy-100"
+                  )}>
+                    {index === 0 && (
+                      <span className="absolute -top-3 left-6 px-3 py-1 bg-primary-600 text-white text-[10px] font-black uppercase tracking-widest rounded-full">
+                        Fastest Turnaround
+                      </span>
+                    )}
                     <div className="flex items-start gap-4 mb-6">
                       <div className="h-16 w-16 rounded-full bg-primary-100 flex items-center justify-center text-xl font-bold text-primary-700">
-                        {doc.full_name.split(' ').map(n => n[0]).join('')}
+                        {doc.full_name.split(' ').map((n: string) => n[0]).join('')}
                       </div>
                       <div>
-                        <h3 className="text-lg font-semibold text-navy-900">{doc.full_name}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-semibold text-navy-900">{doc.full_name}</h3>
+                          {index === 0 && <Star size={16} className="text-primary-500 fill-primary-500" />}
+                        </div>
                         <p className="text-navy-500 text-sm mt-1">{doc.bio || 'General Physician'}</p>
+                        <p className="text-[10px] text-navy-400 mt-2 font-bold uppercase tracking-tight">
+                          Current Load: {doc.current_load} Patients Today
+                        </p>
                       </div>
                     </div>
-                    <button onClick={() => handleDoctorSelect(doc)} className="w-full py-2.5 bg-navy-50 hover:bg-primary-600 hover:text-white text-primary-600 rounded-lg font-medium transition-colors">
-                      Book with this Doctor
+                    <button onClick={() => handleDoctorSelect(doc)} className={cn(
+                      "w-full py-2.5 rounded-lg font-bold transition-all",
+                      index === 0 ? "bg-primary-600 text-white hover:bg-primary-700" : "bg-navy-50 text-primary-600 hover:bg-primary-600 hover:text-white"
+                    )}>
+                      Book Appointment
                     </button>
                   </div>
                 ))}

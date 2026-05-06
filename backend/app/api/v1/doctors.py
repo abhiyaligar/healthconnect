@@ -8,7 +8,46 @@ from app.models.doctor import DoctorProfile
 from app.schemas.profile import DoctorProfileOut, DoctorProfileUpdate, DoctorProfileCreate
 from app.api.v1.auth import get_current_user
 
+from app.models.appointment import Appointment
+from app.models.slot import Slot
+from datetime import datetime, timezone
+
 router = APIRouter()
+
+@router.get("/recommend")
+def recommend_doctors(specialty: str, db: Session = Depends(get_db)):
+    # 1. Get all doctors in this specialty
+    doctors = db.query(DoctorProfile).filter(
+        DoctorProfile.specialty == specialty,
+        DoctorProfile.status == "ACTIVE"
+    ).all()
+    
+    today = datetime.now(timezone.utc).date()
+    
+    # 2. Calculate load for each doctor (Appointments for today)
+    doctor_loads = []
+    for doc in doctors:
+        load = db.query(Appointment).join(Slot).filter(
+            Slot.doctor_id == doc.custom_id,
+            Slot.start_time >= datetime.combine(today, datetime.min.time()).replace(tzinfo=timezone.utc),
+            Slot.start_time <= datetime.combine(today, datetime.max.time()).replace(tzinfo=timezone.utc),
+            Appointment.status != "CANCELLED"
+        ).count()
+        
+        doctor_loads.append({
+            "doctor": doc,
+            "load": load
+        })
+    
+    # 3. Sort by load (ascending)
+    sorted_docs = sorted(doctor_loads, key=lambda x: x["load"])
+    
+    return [
+        {
+            **DoctorProfileOut.model_validate(item["doctor"]).model_dump(),
+            "current_load": item["load"]
+        } for item in sorted_docs
+    ]
 
 @router.get("/", response_model=List[DoctorProfileOut])
 def list_doctors(db: Session = Depends(get_db)):

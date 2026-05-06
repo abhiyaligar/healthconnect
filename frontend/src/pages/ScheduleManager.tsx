@@ -126,7 +126,25 @@ export default function ScheduleManager() {
       });
       setMessage({ type: 'success', text: res.data.message });
     } catch (err: any) {
-      setMessage({ type: 'error', text: err.response?.data?.detail || 'Launch failed' });
+      const errorMsg = err.response?.data?.detail || 'Launch failed due to a system error. Please try again.';
+      setMessage({ type: 'error', text: errorMsg });
+    } finally {
+      setLaunching(false);
+    }
+  };
+
+  const handleBulkLaunch = async () => {
+    if (!selectedDoctorId) {
+      setMessage({ type: 'error', text: 'No doctor selected' });
+      return;
+    }
+    try {
+      setLaunching(true);
+      const res = await api.post(`/schedules/launch/bulk?doctor_id=${selectedDoctorId}&days=7`);
+      setMessage({ type: 'success', text: res.data.message });
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.detail || 'Bulk launch failed. Check your internet connection or server status.';
+      setMessage({ type: 'error', text: errorMsg });
     } finally {
       setLaunching(false);
     }
@@ -261,6 +279,14 @@ export default function ScheduleManager() {
                 className="w-full py-4 bg-navy-900 hover:bg-black text-white rounded-xl font-bold shadow-lg transition-all flex items-center justify-center gap-3 disabled:opacity-50"
               >
                 {launching ? 'Generating Slots...' : <><Send size={18} /> Launch for this Date</>}
+              </button>
+
+              <button 
+                onClick={handleBulkLaunch}
+                disabled={launching || !selectedDoctorId}
+                className="w-full py-3 border-2 border-primary-600 text-primary-600 hover:bg-primary-50 rounded-xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <Zap size={16} /> Launch Next 7 Days
               </button>
 
               {message && (

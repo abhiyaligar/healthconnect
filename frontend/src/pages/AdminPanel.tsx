@@ -6,27 +6,57 @@ import {
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+import api from '../api';
+
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// ─── Mock Data ─────────────────────────────────────────────────────────────────
-const mockUsers = [
-  { id: 1, name: 'Dr. Sarah Smith', role: 'Doctor', email: 'sarah.smith@healthconnect.com', status: 'Active', lastActive: '2 mins ago' },
-  { id: 2, name: 'Admin User', role: 'Admin', email: 'admin@healthconnect.com', status: 'Active', lastActive: 'Now' },
-  { id: 3, name: 'Receptionist Jane', role: 'Receptionist', email: 'jane.desk@healthconnect.com', status: 'Active', lastActive: '15 mins ago' },
-  { id: 4, name: 'Dr. David Lee', role: 'Doctor', email: 'david.lee@healthconnect.com', status: 'Inactive', lastActive: '2 days ago' },
-];
-
-const mockAuditLogs = [
-  { id: 1, action: 'Conflict Resolved', user: 'System (Auto)', detail: 'Dr. Smith slot 10:30 AM overcapacity', time: '10:31 AM' },
-  { id: 2, action: 'Manual Reschedule', user: 'Receptionist Jane', detail: 'Emily Davis moved to 11:15 AM', time: '10:28 AM' },
-  { id: 3, action: 'Settings Updated', user: 'Admin User', detail: 'Max fatigue threshold set to 85', time: '09:15 AM' },
-  { id: 4, action: 'Storm Detected', user: 'System', detail: 'High cancellation rate in Cardiology', time: '08:45 AM' },
-];
+// ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState<'users' | 'settings' | 'logs'>('users');
+  const [users, setUsers] = useState<any[]>([]);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [settings, setSettings] = useState<any>({});
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const fetchUsers = async () => {
+    try {
+      const res = await api.get(`/admin/users?query=${search}`);
+      setUsers(res.data);
+    } catch (err) { console.error(err); }
+  };
+
+  const fetchLogs = async () => {
+    try {
+      const res = await api.get('/admin/audit-logs');
+      setLogs(res.data);
+    } catch (err) { console.error(err); }
+  };
+
+  const fetchSettings = async () => {
+    try {
+      const res = await api.get('/admin/settings');
+      setSettings(res.data);
+    } catch (err) { console.error(err); }
+  };
+
+  React.useEffect(() => {
+    if (activeTab === 'users') fetchUsers();
+    if (activeTab === 'logs') fetchLogs();
+    if (activeTab === 'settings') fetchSettings();
+  }, [activeTab, search]);
+
+  const handleSaveSettings = async () => {
+    setLoading(true);
+    try {
+      await api.post('/admin/settings', settings);
+      alert('Settings saved successfully!');
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
+  };
 
   return (
     <div className="space-y-8">
@@ -83,6 +113,8 @@ export default function AdminPanel() {
                   <Search className="absolute left-3 top-2.5 text-navy-400" size={18} />
                   <input 
                     type="text" 
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search users by name, email or role..."
                     className="w-full pl-10 pr-4 py-2 border border-navy-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20"
                   />
@@ -103,7 +135,7 @@ export default function AdminPanel() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-navy-100">
-                    {mockUsers.map((user) => (
+                    {users.map((user) => (
                       <tr key={user.id} className="hover:bg-navy-50 transition-colors group">
                         <td className="px-6 py-4">
                           <div>
@@ -114,8 +146,8 @@ export default function AdminPanel() {
                         <td className="px-6 py-4">
                           <span className={cn(
                             "px-2 py-1 rounded text-xs font-bold",
-                            user.role === 'Admin' ? "bg-primary-100 text-primary-700" :
-                            user.role === 'Doctor' ? "bg-tertiary-100 text-tertiary-700" :
+                            user.role === 'ADMIN' ? "bg-primary-100 text-primary-700" :
+                            user.role === 'DOCTOR' ? "bg-tertiary-100 text-tertiary-700" :
                             "bg-violet-100 text-violet-700"
                           )}>
                             {user.role}
@@ -214,8 +246,15 @@ export default function AdminPanel() {
                 </div>
               </div>
               <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
-                <button className="w-full sm:w-auto px-6 py-2 border border-navy-200 text-navy-600 font-bold rounded-xl hover:bg-navy-50 transition-all">Discard</button>
-                <button className="w-full sm:w-auto px-6 py-2 bg-primary-600 text-white font-bold rounded-xl hover:bg-primary-700 transition-all shadow-sm">Save Changes</button>
+                <button 
+                  onClick={fetchSettings}
+                  className="w-full sm:w-auto px-6 py-2 border border-navy-200 text-navy-600 font-bold rounded-xl hover:bg-navy-50 transition-all">Discard</button>
+                <button 
+                  onClick={handleSaveSettings}
+                  disabled={loading}
+                  className="w-full sm:w-auto px-6 py-2 bg-primary-600 text-white font-bold rounded-xl hover:bg-primary-700 transition-all shadow-sm">
+                  {loading ? 'Saving...' : 'Save Changes'}
+                </button>
               </div>
             </div>
           )}
@@ -232,7 +271,9 @@ export default function AdminPanel() {
                 </div>
               </div>
               <div className="space-y-0 divide-y divide-navy-100">
-                {mockAuditLogs.map((log) => (
+                {logs.length === 0 ? (
+                  <div className="p-8 text-center text-navy-400 text-sm italic">No recent system events logged.</div>
+                ) : logs.map((log) => (
                   <div key={log.id} className="p-4 flex items-start gap-4 hover:bg-navy-50 transition-colors">
                     <div className="w-10 h-10 rounded-full bg-navy-100 flex items-center justify-center shrink-0">
                       <History size={18} className="text-navy-500" />
@@ -240,11 +281,11 @@ export default function AdminPanel() {
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <p className="font-bold text-navy-900">{log.action}</p>
-                        <span className="text-xs text-navy-400 font-medium">{log.time}</span>
+                        <span className="text-xs text-navy-400 font-medium">{new Date(log.timestamp).toLocaleTimeString()}</span>
                       </div>
-                      <p className="text-sm text-navy-600 mt-0.5">{log.detail}</p>
+                      <p className="text-sm text-navy-600 mt-0.5">{log.details}</p>
                       <p className="text-xs text-navy-400 mt-1 flex items-center gap-1">
-                        <Users size={12} /> Performed by: {log.user}
+                        <Users size={12} /> Performed by: {log.performed_by}
                       </p>
                     </div>
                   </div>

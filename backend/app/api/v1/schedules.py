@@ -18,75 +18,77 @@ def list_availability(doctor_id: str, db: Session = Depends(get_db)):
 
 @router.post("/availability", response_model=AvailabilityOut)
 def create_availability(availability: AvailabilityCreate, db: Session = Depends(get_db)):
-    db_avail = DoctorAvailability(**availability.model_dump())
-    db.add(db_avail)
-    db.commit()
-    db.refresh(db_avail)
-    return db_avail
+    try:
+        db_avail = DoctorAvailability(**availability.model_dump())
+        db.add(db_avail)
+        db.commit()
+        db.refresh(db_avail)
+        return db_avail
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to create availability: {str(e)}")
+        raise HTTPException(status_code=500, detail="Database error occurred while creating availability")
 
 @router.delete("/availability/{id}")
 def delete_availability(id: uuid.UUID, db: Session = Depends(get_db)):
-    db_avail = db.query(DoctorAvailability).filter(DoctorAvailability.id == id).first()
-    if not db_avail:
-        raise HTTPException(status_code=404, detail="Availability not found")
-    db.delete(db_avail)
-    db.commit()
-    return {"message": "Deleted successfully"}
+    try:
+        db_avail = db.query(DoctorAvailability).filter(DoctorAvailability.id == id).first()
+        if not db_avail:
+            raise HTTPException(status_code=404, detail="Availability not found")
+        db.delete(db_avail)
+        db.commit()
+        return {"message": "Deleted successfully"}
+    except HTTPException: raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to delete availability: {str(e)}")
+        raise HTTPException(status_code=500, detail="Database error occurred")
 
 
 @router.post("/launch", status_code=status.HTTP_201_CREATED)
 def launch_schedule(request: ScheduleLaunchRequest, db: Session = Depends(get_db)):
-    # 1. Parse date and find day of week
+    return _internal_launch(request.doctor_id, request.date, db)
+
+def _internal_launch(doctor_id: str, date_str: str, db: Session):
     try:
-        target_date = datetime.strptime(request.date, "%Y-%m-%d").date()
+        target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
     
-    day_of_week = target_date.weekday() # 0=Monday
-    
-    # 2. Get doctor profile for duration
-    doctor = db.query(DoctorProfile).filter(DoctorProfile.custom_id == request.doctor_id).first()
+    day_of_week = target_date.weekday()
+    doctor = db.query(DoctorProfile).filter(DoctorProfile.custom_id == doctor_id).first()
     if not doctor:
         raise HTTPException(status_code=404, detail="Doctor not found")
     
     duration = doctor.avg_consultation_time or 20
-    
-    # 3. Get availability templates for this day
     templates = db.query(DoctorAvailability).filter(
-        DoctorAvailability.doctor_id == request.doctor_id,
+        DoctorAvailability.doctor_id == doctor_id,
         DoctorAvailability.day_of_week == day_of_week,
         DoctorAvailability.is_active == True
     ).all()
     
     if not templates:
-        raise HTTPException(status_code=400, detail=f"No active availability templates found for {target_date.strftime('%A')}")
+        return {"message": f"No active templates for {date_str}", "created": 0}
     
-    # 4. Get existing slots for this doctor on this day to avoid duplicates efficiently
-    # We query for the whole day range
     day_start = datetime.combine(target_date, time.min).replace(tzinfo=timezone.utc)
     day_end = datetime.combine(target_date, time.max).replace(tzinfo=timezone.utc)
     
     existing_slots = db.query(Slot).filter(
-        Slot.doctor_id == request.doctor_id,
+        Slot.doctor_id == doctor_id,
         Slot.start_time >= day_start,
         Slot.start_time <= day_end
     ).all()
-    
-    # Store existing start times in a set for O(1) lookup
     existing_times = {s.start_time.astimezone(timezone.utc) for s in existing_slots}
     
-    # 5. Generate slots
     created_slots = 0
     for template in templates:
-        # Create timezone-aware datetimes (UTC)
         current_time = datetime.combine(target_date, template.start_time).replace(tzinfo=timezone.utc)
         end_dt = datetime.combine(target_date, template.end_time).replace(tzinfo=timezone.utc)
         
         while current_time + timedelta(minutes=duration) <= end_dt:
-            # Check if slot already exists in our pre-fetched set
             if current_time not in existing_times:
                 new_slot = Slot(
-                    doctor_id=request.doctor_id,
+                    doctor_id=doctor_id,
                     start_time=current_time,
                     end_time=current_time + timedelta(minutes=duration),
                     status="OPEN",
@@ -94,15 +96,26 @@ def launch_schedule(request: ScheduleLaunchRequest, db: Session = Depends(get_db
                 )
                 db.add(new_slot)
                 created_slots += 1
-                # Add to set so we don't create it again in the same run (e.g. overlapping templates)
                 existing_times.add(current_time)
-            
             current_time += timedelta(minutes=duration)
     
     try:
         db.commit()
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to launch schedule: {str(e)}")
+        logger.error(f"Batch commit failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to save generated slots")
 
-    return {"message": f"Successfully launched schedule. Created {created_slots} new slots.", "date": request.date}
+    return {"message": f"Success for {date_str}", "created": created_slots}
+
+@router.post("/launch/bulk")
+def bulk_launch_schedule(doctor_id: str, days: int = Query(7, ge=1, le=30), db: Session = Depends(get_db)):
+    today = datetime.now(timezone.utc).date()
+    results = []
+    for i in range(days):
+        target_date = today + timedelta(days=i)
+        res = _internal_launch(doctor_id, target_date.strftime("%Y-%m-%d"), db)
+        results.append(res)
+    
+    total_created = sum(r["created"] for r in results)
+    return {"message": f"Bulk launch completed. Total slots created: {total_created}", "details": results}
