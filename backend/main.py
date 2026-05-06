@@ -12,6 +12,7 @@ from app.api.v1.schedules import router as schedules_router
 from app.api.v1.analytics import router as analytics_router
 from app.api.v1.clinical import router as clinical_router
 from app.api.v1.optimization import router as optimization_router
+from app.api.v1.emergency import router as emergency_router
 
 settings = get_settings()
 
@@ -28,6 +29,7 @@ app.include_router(schedules_router, prefix="/api/v1/schedules", tags=["Schedule
 app.include_router(analytics_router, prefix="/api/v1/analytics", tags=["Analytics"])
 app.include_router(clinical_router, prefix="/api/v1/clinical", tags=["Clinical"])
 app.include_router(optimization_router, prefix="/api/v1/optimization", tags=["Optimization"])
+app.include_router(emergency_router, prefix="/api/v1/emergency", tags=["Emergency"])
 
 app.add_middleware(
     CORSMiddleware,

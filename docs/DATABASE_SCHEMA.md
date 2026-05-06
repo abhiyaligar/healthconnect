@@ -30,6 +30,8 @@ HealthConnect uses a Supabase-managed PostgreSQL database.
     - `status_changed_at`: TIMESTAMPTZ (For Storm Detection)
     - `rating`: INTEGER (1-5 Stars)
     - `feedback`: TEXT
+    - `source`: VARCHAR (ONLINE, WALK_IN, EMERGENCY)
+    - `created_at`: TIMESTAMPTZ
 
 ### `medical_records`
 Stores links to files uploaded to Supabase Storage.

@@ -10,6 +10,8 @@ class Appointment(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     patient_id = Column(String, ForeignKey("patient_profiles.custom_id"), nullable=False)
     slot_id = Column(UUID(as_uuid=True), ForeignKey("slots.id"), nullable=False)
+    source = Column(String, default="ONLINE") # ONLINE, WALK_IN, EMERGENCY
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     status = Column(String, default="PENDING")  # PENDING, CONFIRMED, BUMPED, CANCELLED, IN_PROGRESS, COMPLETED
     queue_token = Column(String, unique=True, nullable=True)

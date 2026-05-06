@@ -5,6 +5,9 @@
 ### `POST /api/v1/auth/signup`
 Creates a new user and initializes their profile.
 - **Body**: `email`, `password`, `full_name`, `role` (DOCTOR/PATIENT).
+- **Safety Valves**:
+    - `403 Forbidden`: Returned if a doctor is fatigued (delay > 40m) and overbooking is attempted.
+    - `429 Too Many Requests`: Returned if the lobby walk-in rate limit (5/15m) is exceeded.
 
 ## Appointments & Clinical
 
@@ -72,6 +75,8 @@ Returns "Storm Detection" status, cancellation velocity, and schedule gap percen
 - `GET /api/v1/optimization/suggestions/{doctor_id}`: Get "Gap Compaction" suggestions.
 - `POST /api/v1/optimization/apply`: Bulk apply schedule compaction and send alerts.
 - `GET /api/v1/optimization/notifications`: Get live log of system alerts.
+- `GET /api/v1/emergency/preview`: Preview mass rescheduling impact with priority sorting.
+- `POST /api/v1/emergency/execute`: Execute bulk move for a doctor's entire day.
 - `POST /api/v1/appointments/batch-reschedule`: Emergency tool to move multiple appointments.
 
 ## Profiles

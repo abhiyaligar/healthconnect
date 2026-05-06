@@ -15,6 +15,7 @@ class AppointmentCreate(BaseModel):
     slot_id: UUID
     reason: Optional[str] = None
     patient_id: Optional[str] = None # For admin/receptionist booking
+    source: Optional[str] = "ONLINE" # ONLINE, WALK_IN, EMERGENCY
 
 class AppointmentUpdate(BaseModel):
     status: Optional[str] = None

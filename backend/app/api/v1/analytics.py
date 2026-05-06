@@ -195,6 +195,7 @@ def get_admin_overview(db: Session = Depends(get_db)):
         booked = db.query(Appointment).join(Slot).filter(Slot.doctor_id == doc.custom_id, func.date(Slot.start_time) == today).count()
         total_slots = db.query(Slot).filter(Slot.doctor_id == doc.custom_id, func.date(Slot.start_time) == today).count()
         doctor_load.append({
+            "id": doc.custom_id,
             "name": doc.full_name,
             "specialty": doc.specialty,
             "scheduled": booked,
@@ -255,13 +256,51 @@ def get_surge_status(db: Session = Depends(get_db)):
     
     gap_pct = (total_cancelled / (total_active + total_cancelled) * 100) if (total_active + total_cancelled) > 0 else 0
     
-    # 3. Decision Logic
+    # 3. Doctor Fatigue Calculation (Delay > 40 mins)
+    fatigue_list = []
+    doctors = db.query(DoctorProfile).all()
+    for doc in doctors:
+        # Find the currently active appointment
+        active_apt = db.query(Appointment).join(Slot).filter(
+            Slot.doctor_id == doc.custom_id,
+            func.date(Slot.start_time) == today,
+            Appointment.status == "IN_PROGRESS"
+        ).first()
+        
+        delay_mins = 0
+        if active_apt:
+            # Delay = Current Time - Scheduled Start Time
+            scheduled = active_apt.slot.start_time
+            if scheduled.tzinfo is None: scheduled = scheduled.replace(tzinfo=timezone.utc)
+            delay_mins = int((now - scheduled).total_seconds() / 60)
+        
+        if delay_mins >= 40:
+            fatigue_list.append({
+                "doctor_id": doc.custom_id,
+                "name": doc.full_name,
+                "delay_mins": delay_mins
+            })
+
+    # 4. Lobby Crowd Control (Walk-ins in last 15 mins)
+    fifteen_mins_ago = now - timedelta(minutes=15)
+    recent_walkins = db.query(Appointment).filter(
+        Appointment.status == "CONFIRMED",
+        Appointment.created_at >= fifteen_mins_ago # Assuming we have created_at
+    ).count() 
+    # Note: If created_at is missing, we'd use status_changed_at or similar
+
+    lobby_overcrowded = recent_walkins >= 5
+
+    # 5. Decision Logic
     is_storm = cancellations_recent >= 5 or gap_pct >= 20
     
     return {
         "is_storm": is_storm,
-        "cancellation_velocity": cancellations_recent, # per 30 mins
+        "cancellation_velocity": cancellations_recent,
         "gap_percentage": int(gap_pct),
+        "fatigued_doctors": fatigue_list,
+        "lobby_overcrowded": lobby_overcrowded,
+        "recent_walkin_count": recent_walkins,
         "recommendation": "TRIGGER_COMPACTION" if is_storm else "STABLE",
         "message": "High cancellation volume detected. Consider compacting the schedule." if is_storm else "Schedule is stable."
     }

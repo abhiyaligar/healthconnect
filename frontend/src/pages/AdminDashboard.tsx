@@ -4,6 +4,7 @@ import {
   Users, Clock, Calendar, ArrowUpRight, ArrowDownRight, Shield
 } from 'lucide-react';
 import api from '../api';
+import EmergencyRescheduleModal from '../components/EmergencyRescheduleModal';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -128,7 +129,7 @@ function BookingVolumeChart({ hourlyData }: { hourlyData: any[] }) {
   );
 }
 
-function DoctorLoadChart({ doctorLoad }: { doctorLoad: any[] }) {
+function DoctorLoadChart({ doctorLoad, onEmergency }: { doctorLoad: any[], onEmergency: (id: string, name: string) => void }) {
   const getLoadStatus = (scheduled: number, capacity: number) => {
     const pct = (scheduled / capacity) * 100;
     if (pct > 100) return { color: 'bg-status-error', textColor: 'text-status-error', label: 'Overloaded' };
@@ -157,9 +158,15 @@ function DoctorLoadChart({ doctorLoad }: { doctorLoad: any[] }) {
                   <span className="text-sm font-semibold text-navy-900">{doc.scheduled}<span className="text-navy-400 font-normal">/{doc.capacity}</span></span>
                 </div>
               </div>
-              <div className="h-2.5 bg-navy-100 rounded-full overflow-hidden">
+              <div className="h-2.5 bg-navy-100 rounded-full overflow-hidden mb-3">
                 <div className={cn('h-full rounded-full transition-all duration-700', color)} style={{ width: `${Math.min(pct, 100)}%` }} />
               </div>
+              <button 
+                onClick={() => onEmergency(doc.id, doc.name)}
+                className="w-full py-1.5 border border-status-error/30 text-status-error text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-status-error hover:text-white transition-all flex items-center justify-center gap-1.5"
+              >
+                <AlertTriangle size={12} /> Emergency Reschedule
+              </button>
             </div>
           );
         })}
@@ -206,9 +213,9 @@ function AlertsFeed({ alerts }: { alerts: any[] }) {
 export default function AdminDashboard() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [emergencyDoc, setEmergencyDoc] = useState<{id: string, name: string} | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = async () => {
       try {
         const res = await api.get('/analytics/admin/overview');
         setData(res.data);
@@ -218,6 +225,7 @@ export default function AdminDashboard() {
         setLoading(false);
       }
     };
+  useEffect(() => {
     fetchData();
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
@@ -250,9 +258,23 @@ export default function AdminDashboard() {
       <BookingVolumeChart hourlyData={data.hourly_data} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <DoctorLoadChart doctorLoad={data.doctor_load} />
+        <DoctorLoadChart 
+          doctorLoad={data.doctor_load} 
+          onEmergency={(id, name) => setEmergencyDoc({id, name})}
+        />
         <AlertsFeed alerts={data.alerts} />
       </div>
+
+      {emergencyDoc && (
+        <EmergencyRescheduleModal 
+          sourceDoctorId={emergencyDoc.id}
+          sourceDoctorName={emergencyDoc.name}
+          onClose={() => {
+            setEmergencyDoc(null);
+            fetchData();
+          }}
+        />
+      )}
     </div>
   );
 }

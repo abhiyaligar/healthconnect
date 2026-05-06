@@ -44,23 +44,35 @@ export default function ReceptionDashboard() {
   return (
     <div className="space-y-6">
       
-      {/* Storm Alert Banner */}
-      {surgeStatus?.is_storm && (
-        <div className="bg-status-error/10 border-2 border-status-error/20 p-6 rounded-[24px] flex flex-col md:flex-row items-center justify-between gap-6 animate-pulse">
+      {/* Storm & Safety Alert Banner */}
+      {(surgeStatus?.is_storm || surgeStatus?.lobby_overcrowded || (surgeStatus?.fatigued_doctors?.length > 0)) && (
+        <div className={cn(
+          "p-6 rounded-[24px] flex flex-col md:flex-row items-center justify-between gap-6 border-2 transition-all",
+          surgeStatus.is_storm ? "bg-status-error/10 border-status-error/20 animate-pulse" : "bg-status-warning/10 border-status-warning/20"
+        )}>
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-status-error text-white rounded-2xl flex items-center justify-center shadow-lg shadow-status-error/20">
+            <div className={cn(
+              "w-12 h-12 text-white rounded-2xl flex items-center justify-center shadow-lg",
+              surgeStatus.is_storm ? "bg-status-error shadow-status-error/20" : "bg-status-warning shadow-status-warning/20"
+            )}>
               <AlertTriangle size={24} />
             </div>
             <div>
-              <h2 className="text-xl font-black text-status-error">CANCELLATION STORM DETECTED</h2>
-              <p className="text-sm font-bold text-navy-600 uppercase tracking-wider">{surgeStatus.message}</p>
+              <h2 className={cn("text-xl font-black", surgeStatus.is_storm ? "text-status-error" : "text-status-warning")}>
+                {surgeStatus.is_storm ? "CANCELLATION STORM DETECTED" : "SAFETY VALVES ENGAGED"}
+              </h2>
+              <p className="text-sm font-bold text-navy-600 uppercase tracking-wider">
+                {surgeStatus.lobby_overcrowded ? "Lobby Overcrowded: Cooldown in effect." : surgeStatus.message}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-             <div className="bg-white px-4 py-2 rounded-xl border border-navy-100 flex flex-col items-center">
-               <span className="text-xs font-bold text-navy-400">Velocity</span>
-               <span className="text-lg font-black text-navy-900">{surgeStatus.cancellation_velocity} / 30m</span>
-             </div>
+             {surgeStatus.lobby_overcrowded && (
+               <div className="bg-white px-4 py-2 rounded-xl border border-navy-100 flex flex-col items-center">
+                 <span className="text-[10px] font-black text-status-error uppercase mb-0.5">Crowd Lock</span>
+                 <span className="text-lg font-black text-navy-900">{surgeStatus.recent_walkin_count}/5</span>
+               </div>
+             )}
              <div className="bg-white px-4 py-2 rounded-xl border border-navy-100 flex flex-col items-center">
                <span className="text-xs font-bold text-navy-400">Gaps</span>
                <span className="text-lg font-black text-navy-900">{surgeStatus.gap_percentage}%</span>
@@ -196,6 +208,11 @@ export default function ReceptionDashboard() {
                     <div className="flex justify-between items-center text-xs font-bold text-navy-700 mb-2">
                         <span>{d.name}</span>
                         <div className="flex items-center gap-3">
+                          {surgeStatus?.fatigued_doctors?.some((f: any) => f.name === d.name) && (
+                            <span className="px-2 py-0.5 bg-status-error text-white text-[8px] font-black uppercase rounded animate-pulse">
+                              Fatigued
+                            </span>
+                          )}
                           <span className={cn(
                             "px-2 py-0.5 rounded",
                             d.capacity > 85 ? "bg-status-error/10 text-status-error" : "text-navy-400"

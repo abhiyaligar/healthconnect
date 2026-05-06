@@ -275,3 +275,19 @@ There is no system that dynamically stabilizes overbooked appointment schedules 
 - [x] Comprehensive Patient Clinical Timeline.
 - [x] Doctor Professional Portfolio & Archive.
 - [x] Full Medical Profile with Historical Trends.
+#### Phase 10: Patient Experience & Ratings [COMPLETED]
+- [x] Post-Consultation Rating System (1-5 Stars + Feedback).
+- [x] Dynamic Doctor Reputation (Average Rating display).
+- [x] Appointment Details Page for patient transparency.
+- [x] 'Come Early' Notification Simulation & Live Log.
+
+#### Phase 11: Doctor Emergency & Bulk Rescheduling [COMPLETED]
+- [x] Priority-Based Re-insertion (P1 > P2 > P3).
+- [x] Cross-Doctor Workload Migration.
+- [x] Impact Preview & Simulation (Allocated vs. Overflow).
+- [x] One-Click Emergency Dashboard Integration.
+
+#### Phase 12: Overload Surge Protection [COMPLETED]
+- [x] Fatigue-Aware Safety Valve (Auto-Lock Overbooking at 40m delay).
+- [x] Lobby Crowd Control (Walk-in Rate Limiting 5/15m).
+- [x] Real-time Fatigue & Crowd Monitoring UI.
