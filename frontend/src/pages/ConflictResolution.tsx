@@ -17,7 +17,7 @@ export default function ConflictResolution() {
   const fetchConflicts = async () => {
     try {
       const res = await api.get('/analytics/conflicts/detailed');
-      setConflicts(res.data);
+      setConflicts(Array.isArray(res.data) ? res.data : res.data?.items || []);
     } catch (err) {
       console.error('Failed to fetch detailed conflicts');
     } finally {

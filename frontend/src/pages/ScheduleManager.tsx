@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Plus, Trash2, Send, CheckCircle2, User, ChevronRight, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, Plus, Trash2, Send, CheckCircle2, User, ChevronRight, AlertCircle, Zap } from 'lucide-react';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { clsx, type ClassValue } from 'clsx';
@@ -77,7 +77,7 @@ export default function ScheduleManager() {
     try {
       setLoading(true);
       const res = await api.get(`/schedules/availability?doctor_id=${docId}`);
-      setAvailabilities(res.data);
+      setAvailabilities(Array.isArray(res.data) ? res.data : res.data?.items || []);
     } catch (err) {
       console.error('Failed to fetch availabilities');
     } finally {

@@ -18,7 +18,7 @@ export default function NotificationCenter() {
     const fetchNotifications = async () => {
       try {
         const res = await api.get('/optimization/notifications');
-        setNotifications(res.data);
+        setNotifications(Array.isArray(res.data) ? res.data : res.data?.items || []);
       } catch (err) {
         console.error('Failed to fetch notifications');
       } finally {

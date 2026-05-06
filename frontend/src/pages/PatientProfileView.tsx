@@ -28,26 +28,34 @@ export default function PatientProfileView() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [profRes, histRes, recsRes] = await Promise.all([
-          api.get('/auth/me'), // Should return profile info
-          api.get('/history/me/full'),
-          api.get('/history/me/records') // We'll need to implement this one or reuse
-        ]);
-        
-        // Mocking profile from user context if endpoint doesn't have it all
+        setLoading(true);
+        const profRes = await api.get('/auth/me');
         setProfile({
-          full_name: user?.full_name || 'Patient User',
-          custom_id: user?.custom_id || 'PAT-001',
+          full_name: user?.full_name || profRes.data?.user_metadata?.full_name || 'Patient',
+          custom_id: profRes.data?.id || '',
           blood_type: 'O+',
           weight: '72kg',
-          gender: 'Male',
-          dob: '1992-05-15'
+          gender: profRes.data?.user_metadata?.gender || 'N/A',
+          dob: profRes.data?.user_metadata?.dob || ''
         });
-        
-        setHistory(histRes.data.items || histRes.data);
-        setRecords(recsRes.data.items || recsRes.data || []);
+
+        // Fetch history independently so one failure doesn't crash everything
+        try {
+          const histRes = await api.get('/history/me/full');
+          setHistory(Array.isArray(histRes.data) ? histRes.data : histRes.data?.items || []);
+        } catch { setHistory([]); }
+
+        try {
+          // Use patient_id based record fetch if available; fallback to empty
+          const patRes = await api.get('/patients/me');
+          if (patRes.data?.custom_id) {
+            const recsRes = await api.get(`/history/${patRes.data.custom_id}/records`);
+            setRecords(Array.isArray(recsRes.data) ? recsRes.data : recsRes.data?.items || []);
+          }
+        } catch { setRecords([]); }
+
       } catch (err) {
-        console.error('Failed to fetch profile data');
+        console.error('Failed to fetch profile data', err);
       } finally {
         setLoading(false);
       }

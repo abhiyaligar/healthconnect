@@ -24,7 +24,7 @@ export default function OptimizationPanel({ doctorId, onApplied }: Props) {
     try {
       setLoading(true);
       const res = await api.get(`/optimization/suggestions/${doctorId}`);
-      setSuggestions(res.data);
+      setSuggestions(Array.isArray(res.data) ? res.data : res.data?.items || []);
     } catch (err) {
       console.error('Failed to fetch suggestions', err);
     } finally {

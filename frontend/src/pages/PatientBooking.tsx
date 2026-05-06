@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, Brain, Bone, Eye, Star, Clock, Calendar, CheckCircle2, AlertCircle, ChevronLeft, Stethoscope } from 'lucide-react';
+import { Heart, Brain, Bone, Eye, Star, Clock, Calendar, CheckCircle2, AlertCircle, ChevronLeft, Stethoscope, Zap } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import api from '../api';
@@ -63,7 +63,7 @@ export default function PatientBooking() {
     try {
       setLoading(true);
       const res = await api.get(`/slots/?doctor_id=${docId}&date=${date}`);
-      setSlots(res.data);
+      setSlots(res.data.items || res.data || []);
     } catch (err) {
       console.error('Failed to fetch slots');
     } finally {
@@ -76,7 +76,7 @@ export default function PatientBooking() {
     setLoading(true);
     try {
       const res = await api.get(`/doctors/recommend?specialty=${spec}`);
-      setDoctors(res.data);
+      setDoctors(res.data.items || res.data || []);
       setStep(2);
     } catch (err) {
       console.error('Failed to fetch recommended doctors');
