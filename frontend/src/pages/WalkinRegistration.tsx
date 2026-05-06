@@ -33,7 +33,7 @@ export default function WalkinRegistration() {
 
   useEffect(() => {
     if (step === 2) {
-      api.get('/doctors/').then(res => setDoctors(res.data));
+      api.get('/doctors/').then(res => setDoctors(res.data.items || res.data));
     }
   }, [step]);
 

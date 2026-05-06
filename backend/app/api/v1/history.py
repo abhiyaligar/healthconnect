@@ -6,12 +6,15 @@ from app.core.database import get_db
 from app.models import Appointment, MedicalRecord, PatientProfile
 from app.schemas.appointment import AppointmentOut, MedicalRecordOut
 from app.api.v1.auth import get_current_user
+from app.schemas.pagination import PaginatedResponse, paginate
 
 router = APIRouter()
 
-@router.get("/{patient_id}", response_model=List[AppointmentOut])
+@router.get("/{patient_id}", response_model=PaginatedResponse[AppointmentOut])
 def get_patient_clinical_history(
     patient_id: str,
+    page: int = 1,
+    limit: int = 10,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
@@ -28,18 +31,20 @@ def get_patient_clinical_history(
         if not profile or str(profile.user_id) != str(current_user.id):
             raise HTTPException(status_code=403, detail="Access denied")
 
-    history = (
+    query = (
         db.query(Appointment)
         .filter(Appointment.patient_id == patient_id)
         .filter(Appointment.status == "COMPLETED")
         .order_by(Appointment.actual_end_time.desc())
-        .all()
     )
-    return history
+    items, total, pages = paginate(query, page, limit)
+    return PaginatedResponse(items=items, total=total, page=page, size=limit, pages=pages)
 
-@router.get("/{patient_id}/records", response_model=List[MedicalRecordOut])
+@router.get("/{patient_id}/records", response_model=PaginatedResponse[MedicalRecordOut])
 def get_patient_records(
     patient_id: str,
+    page: int = 1,
+    limit: int = 10,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
@@ -53,16 +58,18 @@ def get_patient_records(
         if not profile or str(profile.user_id) != str(current_user.id):
             raise HTTPException(status_code=403, detail="Access denied")
 
-    records = (
+    query = (
         db.query(MedicalRecord)
         .filter(MedicalRecord.patient_id == patient_id)
         .order_by(MedicalRecord.created_at.desc())
-        .all()
     )
-    return records
+    items, total, pages = paginate(query, page, limit)
+    return PaginatedResponse(items=items, total=total, page=page, size=limit, pages=pages)
 
-@router.get("/me/full", response_model=List[AppointmentOut])
+@router.get("/me/full", response_model=PaginatedResponse[AppointmentOut])
 def get_my_full_history(
+    page: int = 1,
+    limit: int = 10,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
@@ -70,15 +77,18 @@ def get_my_full_history(
     if not profile:
         raise HTTPException(status_code=404, detail="Patient profile not found")
         
-    return (
+    query = (
         db.query(Appointment)
         .filter(Appointment.patient_id == profile.custom_id)
         .order_by(Appointment.actual_end_time.desc())
-        .all()
     )
+    items, total, pages = paginate(query, page, limit)
+    return PaginatedResponse(items=items, total=total, page=page, size=limit, pages=pages)
 
-@router.get("/doctor/me", response_model=List[AppointmentOut])
+@router.get("/doctor/me", response_model=PaginatedResponse[AppointmentOut])
 def get_doctor_consultation_history(
+    page: int = 1,
+    limit: int = 10,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
@@ -93,10 +103,11 @@ def get_doctor_consultation_history(
     if not doc:
         return []
         
-    return (
+    query = (
         db.query(Appointment)
         .join(Slot)
         .filter(Slot.doctor_id == doc.custom_id, Appointment.status == "COMPLETED")
         .order_by(Appointment.actual_end_time.desc())
-        .all()
     )
+    items, total, pages = paginate(query, page, limit)
+    return PaginatedResponse(items=items, total=total, page=page, size=limit, pages=pages)

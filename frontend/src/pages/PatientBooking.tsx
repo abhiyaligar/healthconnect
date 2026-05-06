@@ -51,7 +51,7 @@ export default function PatientBooking() {
     const fetchDoctors = async () => {
       try {
         const res = await api.get('/doctors/');
-        setDoctors(res.data);
+        setDoctors(res.data.items || res.data);
       } catch (err) {
         console.error('Failed to fetch doctors');
       }

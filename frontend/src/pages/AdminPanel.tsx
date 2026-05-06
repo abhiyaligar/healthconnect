@@ -21,18 +21,26 @@ export default function AdminPanel() {
   const [settings, setSettings] = useState<any>({});
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersTotalPages, setUsersTotalPages] = useState(1);
+  const [logsPage, setLogsPage] = useState(1);
+  const [logsTotalPages, setLogsTotalPages] = useState(1);
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [newUser, setNewUser] = useState({ full_name: '', email: '', password: '', role: 'DOCTOR', mobile: '' });
 
   const fetchUsers = async () => {
     try {
-      const res = await api.get(`/admin/users?query=${search}`);
-      setUsers(res.data);
+      const res = await api.get(`/admin/users?query=${search}&page=${usersPage}&limit=10`);
+      setUsers(res.data.items || res.data);
+      if (res.data.pages) setUsersTotalPages(res.data.pages);
     } catch (err) { console.error(err); }
   };
 
   const fetchLogs = async () => {
     try {
-      const res = await api.get('/admin/audit-logs');
-      setLogs(res.data);
+      const res = await api.get(`/admin/audit-logs?page=${logsPage}&limit=10`);
+      setLogs(res.data.items || res.data);
+      if (res.data.pages) setLogsTotalPages(res.data.pages);
     } catch (err) { console.error(err); }
   };
 
@@ -47,7 +55,7 @@ export default function AdminPanel() {
     if (activeTab === 'users') fetchUsers();
     if (activeTab === 'logs') fetchLogs();
     if (activeTab === 'settings') fetchSettings();
-  }, [activeTab, search]);
+  }, [activeTab, search, usersPage, logsPage]);
 
   const handleSaveSettings = async () => {
     setLoading(true);
@@ -56,6 +64,33 @@ export default function AdminPanel() {
       alert('Settings saved successfully!');
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
+  };
+
+  const handleToggleStatus = async (userId: string, currentStatus: string) => {
+    try {
+      const newActive = currentStatus !== 'ACTIVE';
+      await api.patch(`/admin/users/${userId}/status?active=${newActive}`);
+      fetchUsers();
+    } catch (err) { console.error(err); }
+  };
+
+  const handleUpdateRole = async (userId: string, newRole: string) => {
+    try {
+      await api.patch(`/admin/users/${userId}/role?new_role=${newRole}`);
+      fetchUsers();
+    } catch (err) { console.error(err); }
+  };
+
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.post('/admin/users', newUser);
+      setIsAddUserModalOpen(false);
+      setNewUser({ full_name: '', email: '', password: '', role: 'DOCTOR', mobile: '' });
+      fetchUsers();
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Failed to create user');
+    }
   };
 
   return (
@@ -119,7 +154,9 @@ export default function AdminPanel() {
                     className="w-full pl-10 pr-4 py-2 border border-navy-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20"
                   />
                 </div>
-                <button className="w-full sm:w-auto px-4 py-2 bg-primary-600 text-white text-sm font-bold rounded-lg hover:bg-primary-700 transition-colors">
+                <button 
+                  onClick={() => setIsAddUserModalOpen(true)}
+                  className="w-full sm:w-auto px-4 py-2 bg-primary-600 text-white text-sm font-bold rounded-lg hover:bg-primary-700 transition-colors">
                   Add New User
                 </button>
               </div>
@@ -155,29 +192,66 @@ export default function AdminPanel() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-1.5">
-                            {user.status === 'Active' ? (
+                            {user.status === 'ACTIVE' ? (
                               <CheckCircle2 size={14} className="text-status-open" />
                             ) : (
                               <XCircle size={14} className="text-navy-300" />
                             )}
-                            <span className={cn(
-                              "text-sm font-medium",
-                              user.status === 'Active' ? "text-status-open" : "text-navy-400"
-                            )}>
+                            <button 
+                              onClick={() => handleToggleStatus(user.id, user.status)}
+                              className={cn(
+                                "text-sm font-medium hover:underline",
+                                user.status === 'ACTIVE' ? "text-status-open" : "text-navy-400"
+                              )}>
                               {user.status}
-                            </span>
+                            </button>
                           </div>
                         </td>
                         <td className="px-6 py-4 text-sm text-navy-500">{user.lastActive}</td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-6 py-4 text-right relative group/actions">
                           <button className="p-1 hover:bg-navy-100 rounded transition-colors text-navy-400">
                             <MoreVertical size={18} />
                           </button>
+                          <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-2xl border border-navy-100 hidden group-hover/actions:block z-50">
+                            <div className="p-2 space-y-1">
+                              <p className="px-3 py-1.5 text-[10px] font-bold text-navy-400 uppercase">Change Role</p>
+                              <button onClick={() => handleUpdateRole(user.id, 'ADMIN')} className="w-full text-left px-3 py-2 text-xs hover:bg-navy-50 rounded-lg text-navy-700">Make Admin</button>
+                              <button onClick={() => handleUpdateRole(user.id, 'DOCTOR')} className="w-full text-left px-3 py-2 text-xs hover:bg-navy-50 rounded-lg text-navy-700">Make Doctor</button>
+                              <button onClick={() => handleUpdateRole(user.id, 'PATIENT')} className="w-full text-left px-3 py-2 text-xs hover:bg-navy-50 rounded-lg text-navy-700">Make Patient</button>
+                              <div className="h-px bg-navy-100 my-1" />
+                              <button 
+                                onClick={() => handleToggleStatus(user.id, user.status)}
+                                className={cn(
+                                  "w-full text-left px-3 py-2 text-xs rounded-lg font-bold",
+                                  user.status === 'ACTIVE' ? "text-status-error hover:bg-status-error/5" : "text-status-open hover:bg-status-open/5"
+                                )}
+                              >
+                                {user.status === 'ACTIVE' ? 'Deactivate Account' : 'Reactivate Account'}
+                              </button>
+                            </div>
+                          </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+              <div className="p-4 border-t border-navy-100 flex items-center justify-between">
+                <button 
+                  disabled={usersPage <= 1} 
+                  onClick={() => setUsersPage(p => p - 1)}
+                  className="px-4 py-2 text-sm font-bold text-navy-600 disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <span className="text-sm font-medium text-navy-500">Page {usersPage} of {usersTotalPages || 1}</span>
+                <button 
+                  disabled={usersPage >= usersTotalPages} 
+                  onClick={() => setUsersPage(p => p + 1)}
+                  className="px-4 py-2 text-sm font-bold text-navy-600 disabled:opacity-50"
+                >
+                  Next
+                </button>
               </div>
             </div>
           )}
@@ -291,6 +365,23 @@ export default function AdminPanel() {
                   </div>
                 ))}
               </div>
+              <div className="p-4 border-t border-navy-100 flex items-center justify-between">
+                <button 
+                  disabled={logsPage <= 1} 
+                  onClick={() => setLogsPage(p => p - 1)}
+                  className="px-4 py-2 text-sm font-bold text-navy-600 disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <span className="text-sm font-medium text-navy-500">Page {logsPage} of {logsTotalPages || 1}</span>
+                <button 
+                  disabled={logsPage >= logsTotalPages} 
+                  onClick={() => setLogsPage(p => p + 1)}
+                  className="px-4 py-2 text-sm font-bold text-navy-600 disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -354,6 +445,48 @@ export default function AdminPanel() {
           </div>
         </div>
       </div>
+
+      {isAddUserModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-navy-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-navy-900">Add New User</h3>
+              <button onClick={() => setIsAddUserModalOpen(false)} className="text-navy-400 hover:text-navy-600">
+                <XCircle size={24} />
+              </button>
+            </div>
+            <form onSubmit={handleAddUser} className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-navy-700 mb-1">Full Name</label>
+                <input required type="text" value={newUser.full_name} onChange={e => setNewUser({...newUser, full_name: e.target.value})} className="w-full p-3 border border-navy-200 rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-navy-700 mb-1">Email</label>
+                <input required type="email" value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} className="w-full p-3 border border-navy-200 rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-navy-700 mb-1">Password</label>
+                <input required type="password" value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} className="w-full p-3 border border-navy-200 rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-navy-700 mb-1">Mobile</label>
+                <input required type="text" value={newUser.mobile} onChange={e => setNewUser({...newUser, mobile: e.target.value})} className="w-full p-3 border border-navy-200 rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-navy-700 mb-1">Role</label>
+                <select value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value})} className="w-full p-3 border border-navy-200 rounded-lg bg-white">
+                  <option value="DOCTOR">Doctor</option>
+                  <option value="PATIENT">Patient</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+              </div>
+              <button type="submit" className="w-full py-3 bg-primary-600 text-white font-bold rounded-lg hover:bg-primary-700">
+                Create User
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

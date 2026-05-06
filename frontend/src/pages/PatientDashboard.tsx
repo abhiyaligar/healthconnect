@@ -36,7 +36,7 @@ export default function PatientDashboard() {
     const fetchAppointments = async () => {
       try {
         const res = await api.get('/appointments/me');
-        setAppointments(res.data);
+        setAppointments(res.data.items || res.data);
       } catch (err) {
         console.error('Failed to fetch appointments');
       } finally {

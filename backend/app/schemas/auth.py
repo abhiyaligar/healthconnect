@@ -6,6 +6,7 @@ class UserRole(str, Enum):
     DOCTOR = "DOCTOR"
     PATIENT = "PATIENT"
     RECEPTIONIST = "RECEPTIONIST"
+    ADMIN = "ADMIN"
 
 class UserAuth(BaseModel):
     email: EmailStr
@@ -32,3 +33,11 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str
     user: UserResponse
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    otp: str
+    new_password: str
+
+class AdminRegisterRequest(UserAuth):
+    full_name: str

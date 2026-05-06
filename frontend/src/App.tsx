@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth, roleHomePath } from './context/AuthContext';
+import { ToastProvider } from './components/ToastProvider';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import LandingPage from './pages/LandingPage';
@@ -123,8 +124,6 @@ function AppRoutes() {
     </Routes>
   );
 }
-
-import { ToastProvider } from './components/ToastProvider';
 
 function App() {
   return (

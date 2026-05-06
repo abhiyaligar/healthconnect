@@ -9,6 +9,7 @@ from app.core.database import get_db
 from app.models import Appointment, Slot, PatientProfile, MedicalRecord, DoctorProfile
 from app.schemas.appointment import AppointmentCreate, AppointmentOut, ClinicalNotesUpdate, MedicalRecordOut
 from app.api.v1.auth import get_current_user
+from app.schemas.pagination import PaginatedResponse, paginate
 from app.services.analytics import calculate_doctor_avg
 from app.services.email_service import EmailService
 from app.core.storage import upload_medical_file
@@ -118,31 +119,41 @@ def book_appointment(
 
     return db_appointment
 
-@router.get("/me", response_model=List[AppointmentOut])
+@router.get("/me", response_model=PaginatedResponse[AppointmentOut])
 def list_my_appointments(
+    page: int = 1,
+    limit: int = 10,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
     user_id = uuid_pkg.UUID(str(current_user.id))
     profile = db.query(PatientProfile).filter(PatientProfile.user_id == user_id).first()
     if not profile:
-        return []
-    return db.query(Appointment).filter(Appointment.patient_id == profile.custom_id).all()
+        return PaginatedResponse(items=[], total=0, page=page, size=limit, pages=0)
+    query = db.query(Appointment).filter(Appointment.patient_id == profile.custom_id)
+    items, total, pages = paginate(query, page, limit)
+    return PaginatedResponse(items=items, total=total, page=page, size=limit, pages=pages)
 
-@router.get("/doctor/me", response_model=List[AppointmentOut])
+@router.get("/doctor/me", response_model=PaginatedResponse[AppointmentOut])
 def list_doctor_appointments(
+    page: int = 1,
+    limit: int = 10,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
     user_id = uuid_pkg.UUID(str(current_user.id))
     doctor = db.query(DoctorProfile).filter(DoctorProfile.user_id == user_id).first()
     if not doctor:
-        return []
-    return db.query(Appointment).join(Slot).filter(Slot.doctor_id == doctor.custom_id).all()
+        return PaginatedResponse(items=[], total=0, page=page, size=limit, pages=0)
+    query = db.query(Appointment).join(Slot).filter(Slot.doctor_id == doctor.custom_id)
+    items, total, pages = paginate(query, page, limit)
+    return PaginatedResponse(items=items, total=total, page=page, size=limit, pages=pages)
 
-@router.get("/all", response_model=List[AppointmentOut])
-def list_all_appointments(db: Session = Depends(get_db)):
-    return db.query(Appointment).filter(Appointment.status != 'CANCELLED').all()
+@router.get("/all", response_model=PaginatedResponse[AppointmentOut])
+def list_all_appointments(page: int = 1, limit: int = 10, db: Session = Depends(get_db)):
+    query = db.query(Appointment).filter(Appointment.status != 'CANCELLED')
+    items, total, pages = paginate(query, page, limit)
+    return PaginatedResponse(items=items, total=total, page=page, size=limit, pages=pages)
 
 @router.patch("/{appointment_id}/call", response_model=AppointmentOut)
 def start_consultation(

@@ -9,6 +9,7 @@ export default function ResetPassword() {
   const email = searchParams.get('email');
   const token = searchParams.get('token');
 
+  const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -31,9 +32,11 @@ export default function ResetPassword() {
     setError('');
 
     try {
-      // In a real app, call /auth/reset-password with token
-      // For now, simulate success
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await api.post('/auth/reset-password', {
+        email,
+        otp,
+        new_password: password
+      });
       setSuccess(true);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to reset password.');
@@ -73,10 +76,22 @@ export default function ResetPassword() {
             <span className="text-2xl font-bold text-primary-700 tracking-tight">HealthConnect</span>
           </div>
           <h2 className="text-2xl font-bold text-navy-900">Reset Password</h2>
-          <p className="text-sm text-navy-400 mt-1">Set a new secure password for <strong>{email}</strong></p>
+          <p className="text-sm text-navy-400 mt-1">Enter the 6-digit code sent to <strong>{email}</strong> and set a new password.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="p-10 space-y-6">
+          <div>
+            <label className="block text-sm font-semibold text-navy-700 mb-2">6-Digit Code</label>
+            <input
+              type="text"
+              maxLength={6}
+              value={otp}
+              onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
+              placeholder="000000"
+              className="w-full px-5 py-4 bg-navy-50/50 border border-navy-100 rounded-2xl text-center text-2xl font-black tracking-[10px] text-navy-900 focus:ring-2 focus:ring-primary-500 outline-none transition"
+              required
+            />
+          </div>
           <div>
             <label className="block text-sm font-semibold text-navy-700 mb-2">New Password</label>
             <div className="relative">

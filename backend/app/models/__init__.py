@@ -8,6 +8,7 @@ from app.models.availability import DoctorAvailability
 from app.models.vitals import Vitals
 from app.models.prescription import Prescription, PrescriptionItem
 from app.models.notification import Notification
-from app.models.admin import SystemSetting, AuditLog
+from app.models.admin import SystemSetting, AuditLog, AdminProfile
+from app.models.otp import OTPRecord
 
-__all__ = ["Base", "Slot", "Appointment", "DoctorProfile", "PatientProfile", "MedicalRecord", "DoctorAvailability", "Vitals", "Prescription", "PrescriptionItem", "Notification", "SystemSetting", "AuditLog"]
+__all__ = ["Base", "Slot", "Appointment", "DoctorProfile", "PatientProfile", "MedicalRecord", "DoctorAvailability", "Vitals", "Prescription", "PrescriptionItem", "Notification", "SystemSetting", "AuditLog", "AdminProfile", "OTPRecord"]

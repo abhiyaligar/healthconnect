@@ -19,7 +19,7 @@ export default function EmergencyRescheduleModal({ sourceDoctorId, sourceDoctorN
   useEffect(() => {
     const fetchDoctors = async () => {
       const res = await api.get('/doctors');
-      setDoctors(res.data);
+      setDoctors(res.data.items || res.data);
     };
     fetchDoctors();
   }, []);

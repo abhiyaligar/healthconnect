@@ -44,8 +44,8 @@ export default function PatientProfileView() {
           dob: '1992-05-15'
         });
         
-        setHistory(histRes.data);
-        setRecords(recsRes.data || []);
+        setHistory(histRes.data.items || histRes.data);
+        setRecords(recsRes.data.items || recsRes.data || []);
       } catch (err) {
         console.error('Failed to fetch profile data');
       } finally {

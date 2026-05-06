@@ -183,7 +183,7 @@ export default function LandingPage() {
     setLoading(true);
     try {
       await api.post(`/auth/forgot-password?email=${email.trim()}`);
-      setResetSent(true);
+      navigate(`/reset-password?email=${encodeURIComponent(email.trim())}`);
       setError('');
     } catch (err: any) {
       const msg = err.response?.data?.detail || 'Failed to send reset link. Please verify your email.';

@@ -202,20 +202,22 @@ def get_admin_overview(db: Session = Depends(get_db)):
             "capacity": total_slots or 20
         })
 
-    # 4. Alerts (Recent 6 status changes)
+    # 4. Alerts (Recent 6 administrative/system events from AuditLog)
     recent_events = []
-    recent_apts = db.query(Appointment).order_by(Appointment.id.desc()).limit(6).all()
-    for apt in recent_apts:
+    from app.models.admin import AuditLog
+    logs = db.query(AuditLog).order_by(AuditLog.timestamp.desc()).limit(6).all()
+    
+    for log in logs:
         atype = "info"
-        if apt.status == "COMPLETED": atype = "success"
-        elif apt.status == "CANCELLED": atype = "error"
-        elif apt.status == "IN_PROGRESS": atype = "warning"
+        if "ERROR" in log.action or "FAIL" in log.action: atype = "error"
+        elif "CHANGE" in log.action or "UPDATE" in log.action: atype = "warning"
+        elif "SUCCESS" in log.action or "LAUNCH" in log.action: atype = "success"
         
         recent_events.append({
-            "id": str(apt.id),
+            "id": str(log.id),
             "type": atype,
-            "time": "Just now",
-            "message": f"Patient {apt.queue_token} is now {apt.status.replace('_', ' ').lower()}."
+            "time": log.timestamp.strftime("%I:%M %p"),
+            "message": f"{log.action}: {log.details}"
         })
 
     return {

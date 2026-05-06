@@ -112,7 +112,7 @@ export default function DoctorDashboard() {
           api.get('/appointments/doctor/me')
         ]);
         setProfile(profileRes.data);
-        setAppointments(apptsRes.data);
+        setAppointments(apptsRes.data.items || apptsRes.data);
       } catch (err) {
         console.error('Failed to fetch doctor data', err);
       } finally {
@@ -127,7 +127,7 @@ export default function DoctorDashboard() {
       if (selectedPatient?.patient_id) {
         try {
           const res = await api.get(`/history/${selectedPatient.patient_id}`);
-          setPatientHistory(res.data);
+          setPatientHistory(res.data.items || res.data);
         } catch (err) {
           console.error('Failed to fetch patient history');
         }

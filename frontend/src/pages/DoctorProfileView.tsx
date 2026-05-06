@@ -16,7 +16,7 @@ export default function DoctorProfileView() {
     const fetchData = async () => {
       try {
         const res = await api.get('/history/doctor/me');
-        setHistory(res.data);
+        setHistory(res.data.items || res.data);
       } catch (err) {
         console.error('Failed to fetch doctor history');
       } finally {

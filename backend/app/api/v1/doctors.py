@@ -7,6 +7,7 @@ from app.core.database import get_db
 from app.models.doctor import DoctorProfile
 from app.schemas.profile import DoctorProfileOut, DoctorProfileUpdate, DoctorProfileCreate
 from app.api.v1.auth import get_current_user
+from app.schemas.pagination import PaginatedResponse, paginate
 
 from app.models.appointment import Appointment
 from app.models.slot import Slot
@@ -49,9 +50,11 @@ def recommend_doctors(specialty: str, db: Session = Depends(get_db)):
         } for item in sorted_docs
     ]
 
-@router.get("/", response_model=List[DoctorProfileOut])
-def list_doctors(db: Session = Depends(get_db)):
-    return db.query(DoctorProfile).filter(DoctorProfile.status == "ACTIVE").all()
+@router.get("/", response_model=PaginatedResponse[DoctorProfileOut])
+def list_doctors(page: int = 1, limit: int = 10, db: Session = Depends(get_db)):
+    query = db.query(DoctorProfile).filter(DoctorProfile.status == "ACTIVE")
+    items, total, pages = paginate(query, page, limit)
+    return PaginatedResponse(items=items, total=total, page=page, size=limit, pages=pages)
 
 @router.get("/me", response_model=DoctorProfileOut)
 def get_my_profile(

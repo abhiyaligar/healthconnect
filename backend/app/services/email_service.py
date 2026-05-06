@@ -47,17 +47,16 @@ class EmailService:
         cls._send_email(email, subject, body)
 
     @classmethod
-    def send_password_reset_email(cls, email: str, link: str):
+    def send_password_reset_otp(cls, email: str, otp: str):
         subject = "Reset your HealthConnect password"
         body = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
             <h2 style="color: #006382;">Password Reset Request</h2>
-            <p>We received a request to reset your password. Click the button below to proceed:</p>
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="{link}" style="background: #006382; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
+            <p>We received a request to reset your password. Please use the following 6-digit code to proceed:</p>
+            <div style="background: #f4f7f9; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; color: #006382; letter-spacing: 5px; border-radius: 8px;">
+                {otp}
             </div>
-            <p style="color: #555; font-size: 14px;">Alternatively, copy and paste this link into your browser:</p>
-            <p style="color: #006382; font-size: 12px;">{link}</p>
+            <p style="color: #555; font-size: 14px; margin-top: 20px;">This code is valid for 10 minutes. If you didn't request a password reset, you can safely ignore this email.</p>
         </div>
         """
         cls._send_email(email, subject, body)

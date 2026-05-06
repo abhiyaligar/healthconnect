@@ -35,8 +35,8 @@ export default function QueuePanel() {
         api.get('/appointments/all'),
         api.get('/doctors/')
       ]);
-      setQueue(apptsRes.data);
-      setDoctors(docsRes.data);
+      setQueue(apptsRes.data.items || apptsRes.data);
+      setDoctors(docsRes.data.items || docsRes.data);
     } catch (err) {
       console.error('Failed to fetch queue data');
     } finally {

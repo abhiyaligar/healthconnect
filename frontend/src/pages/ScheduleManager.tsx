@@ -46,9 +46,10 @@ export default function ScheduleManager() {
   const fetchDoctors = async () => {
     try {
       const res = await api.get('/doctors/');
-      setDoctors(res.data);
-      if (res.data.length > 0) {
-        setSelectedDoctorId(res.data[0].custom_id);
+      const items = res.data.items || res.data;
+      setDoctors(items);
+      if (items.length > 0) {
+        setSelectedDoctorId(items[0].custom_id);
       }
     } catch (err) {
       console.error('Failed to fetch doctors');
