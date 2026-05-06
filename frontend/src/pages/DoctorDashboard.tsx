@@ -4,6 +4,9 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
+import PrescriptionBuilder from '../components/PrescriptionBuilder';
+import VitalsEntry from '../components/VitalsEntry';
+import ICDAutoComplete from '../components/ICDAutoComplete';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -44,6 +47,10 @@ export default function DoctorDashboard() {
   const [isConsulting, setIsConsulting] = useState(false);
   const [showFullChart, setShowFullChart] = useState(false);
   const [prescription, setPrescription] = useState('');
+  const [prescriptionItems, setPrescriptionItems] = useState<any[]>([]);
+  const [vitals, setVitals] = useState({
+    bp_systolic: '', bp_diastolic: '', heart_rate: '', spo2: '', temperature: '', weight: ''
+  });
   const [followUpDate, setFollowUpDate] = useState('');
 
   const handlePatientSelect = (appt: Appointment) => {
@@ -52,7 +59,41 @@ export default function DoctorDashboard() {
     setIsConsulting(appt.status === 'IN_PROGRESS' || appt.status === 'COMPLETED');
     setShowFullChart(false);
     setPrescription('');
+    setPrescriptionItems([]);
+    setVitals({
+      bp_systolic: '', bp_diastolic: '', heart_rate: '', spo2: '', temperature: '', weight: ''
+    });
     setFollowUpDate('');
+    
+    // Fetch clinical details if they exist
+    fetchClinicalDetails(appt.id, appt.patient_id);
+  };
+
+  const fetchClinicalDetails = async (apptId: string, patientId: string) => {
+    try {
+      const [vitalsRes, prescriptionRes] = await Promise.all([
+        api.get(`/clinical/vitals/history/${patientId}`).then(res => res.data.find((v: any) => v.appointment_id === apptId)),
+        api.get(`/clinical/prescription/${apptId}`)
+      ]);
+
+      if (vitalsRes) {
+        setVitals({
+          bp_systolic: vitalsRes.bp_systolic?.toString() || '',
+          bp_diastolic: vitalsRes.bp_diastolic?.toString() || '',
+          heart_rate: vitalsRes.heart_rate?.toString() || '',
+          spo2: vitalsRes.spo2?.toString() || '',
+          temperature: vitalsRes.temperature?.toString() || '',
+          weight: vitalsRes.weight?.toString() || ''
+        });
+      }
+
+      if (prescriptionRes.data) {
+        setPrescription(prescriptionRes.data.notes || '');
+        setPrescriptionItems(prescriptionRes.data.items || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch clinical details', err);
+    }
   };
 
   const closePanel = () => {
@@ -103,10 +144,34 @@ export default function DoctorDashboard() {
 
   const handleUpdateNotes = async (apptId: string) => {
     try {
-      const res = await api.patch(`/appointments/${apptId}/clinical-notes`, notes);
+      // 1. Update basic clinical notes & diagnosis
+      await api.patch(`/appointments/${apptId}/clinical-notes`, notes);
+      
+      // 2. Save Vitals if any were entered
+      if (vitals.bp_systolic || vitals.heart_rate || vitals.spo2) {
+        await api.post('/clinical/vitals', {
+          appointment_id: apptId,
+          patient_id: selectedPatient?.patient_id,
+          ...Object.fromEntries(Object.entries(vitals).map(([k, v]) => [k, v === '' ? null : (k === 'temperature' || k === 'weight' ? parseFloat(v) : parseInt(v))]))
+        });
+      }
+
+      // 3. Save Prescription if any items were added
+      if (prescriptionItems.length > 0) {
+        await api.post('/clinical/prescription', {
+          appointment_id: apptId,
+          patient_id: selectedPatient?.patient_id,
+          doctor_id: profile?.custom_id,
+          notes: prescription,
+          items: prescriptionItems
+        });
+      }
+
+      const res = await api.get(`/appointments/${apptId}`);
       setAppointments(prev => prev.map(a => a.id === apptId ? res.data : a));
-      alert('Notes updated successfully');
+      alert('Clinical data saved successfully');
     } catch (err) {
+      console.error(err);
       alert('Failed to update notes');
     }
   };
@@ -286,32 +351,37 @@ export default function DoctorDashboard() {
                 </>
               ) : (
                 <div className="space-y-6 animate-[fade-in_0.2s_ease-out]">
-                  <div>
-                    <label className="block text-sm font-bold text-navy-900 mb-2">Diagnosis</label>
-                    <input 
-                      type="text" 
-                      value={notes.diagnosis}
-                      onChange={(e) => setNotes(n => ({...n, diagnosis: e.target.value}))}
-                      className="w-full px-4 py-3 border border-navy-200 rounded-xl text-sm"
-                      placeholder="Enter diagnosis..."
-                    />
+                  <div className="space-y-8">
+                    <VitalsEntry vitals={vitals} onChange={setVitals} />
+                    
+                    <div className="w-full h-px bg-navy-100" />
+                    
+                    <ICDAutoComplete value={notes.diagnosis} onChange={(val) => setNotes(n => ({...n, diagnosis: val}))} />
+                    
+                    <div className="w-full h-px bg-navy-100" />
+                    
+                    <div>
+                      <label className="block text-sm font-bold text-navy-900 mb-2">Clinical Consultation Notes</label>
+                      <textarea 
+                        rows={5}
+                        value={notes.clinical_notes}
+                        onChange={(e) => setNotes(n => ({...n, clinical_notes: e.target.value}))}
+                        className="w-full px-4 py-3 border border-navy-200 rounded-xl text-sm resize-none"
+                        placeholder="Detailed consultation notes..."
+                      />
+                    </div>
+
+                    <div className="w-full h-px bg-navy-100" />
+
+                    <PrescriptionBuilder items={prescriptionItems} onChange={setPrescriptionItems} />
+
+                    <button 
+                      onClick={() => handleUpdateNotes(selectedPatient.id)}
+                      className="w-full py-4 bg-primary-600 text-white font-bold rounded-xl hover:bg-primary-700 shadow-lg shadow-primary-500/20 transition-all"
+                    >
+                      Save Clinical Records
+                    </button>
                   </div>
-                  <div>
-                    <label className="block text-sm font-bold text-navy-900 mb-2">Clinical Notes</label>
-                    <textarea 
-                      rows={5}
-                      value={notes.clinical_notes}
-                      onChange={(e) => setNotes(n => ({...n, clinical_notes: e.target.value}))}
-                      className="w-full px-4 py-3 border border-navy-200 rounded-xl text-sm resize-none"
-                      placeholder="Detailed consultation notes..."
-                    />
-                  </div>
-                  <button 
-                    onClick={() => handleUpdateNotes(selectedPatient.id)}
-                    className="w-full py-2 bg-navy-100 text-navy-700 font-bold rounded-lg hover:bg-navy-200"
-                  >
-                    Save Notes
-                  </button>
                 </div>
               )}
             </div>

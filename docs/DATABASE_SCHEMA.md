@@ -63,6 +63,37 @@ Stores links to files uploaded to Supabase Storage.
 - `start_time`: TIME
 - `end_time`: TIME
 - `is_active`: BOOLEAN
+- [x] Correctly checks for existing slots before generation
+- [x] Includes `uix_doctor_slot_time` unique constraint
+
+### `vitals`
+- `id`: UUID (PK)
+- `appointment_id`: UUID (FK)
+- `patient_id`: String (FK)
+- `bp_systolic`: INTEGER
+- `bp_diastolic`: INTEGER
+- `heart_rate`: INTEGER
+- `spo2`: INTEGER
+- `temperature`: FLOAT
+- `weight`: FLOAT
+- `recorded_at`: TIMESTAMPTZ
+
+### `prescriptions`
+- `id`: UUID (PK)
+- `appointment_id`: UUID (FK)
+- `patient_id`: String (FK)
+- `doctor_id`: String (FK)
+- `notes`: TEXT
+- `created_at`: TIMESTAMPTZ
+
+### `prescription_items`
+- `id`: UUID (PK)
+- `prescription_id`: UUID (FK)
+- `medicine_name`: VARCHAR
+- `dosage`: VARCHAR
+- `frequency`: VARCHAR
+- `duration`: VARCHAR
+- `instructions`: VARCHAR
 
 ## Relationships
 
@@ -72,5 +103,8 @@ erDiagram
     doctor_profiles ||--o{ slots : "launches"
     slots ||--o{ appointments : contains
     appointments ||--o{ medical_records : "has reports"
+    appointments ||--o{ vitals : "has vitals"
+    appointments ||--o{ prescriptions : "has prescription"
+    prescriptions ||--o{ prescription_items : "contains"
     patient_profiles ||--o{ appointments : books
 ```

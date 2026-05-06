@@ -13,6 +13,13 @@ Creates a new user and initializes their profile.
 - `PATCH /api/v1/appointments/{id}/clinical-notes`: Update diagnosis and notes (Doctor only).
 - `PATCH /api/v1/appointments/{id}/complete`: End session and update analytics.
 
+### Clinical Data Management
+- `POST /api/v1/clinical/vitals`: Record vitals (BP, SpO2, Heart Rate, etc).
+- `GET /api/v1/clinical/vitals/history/{patient_id}`: Get historical vitals for a patient.
+- `POST /api/v1/clinical/prescription`: Create a structured multi-item prescription.
+- `GET /api/v1/clinical/prescription/{appointment_id}`: Fetch the prescription for an appointment.
+- `GET /api/v1/clinical/icd10?query=...`: Search for standardized ICD-10 medical codes.
+
 ### Medical Records
 - `POST /api/v1/appointments/{id}/records`: Upload a medical report/file (Multi-part form).
     - Fields: `file` (File), `file_type` (String), `description` (String).

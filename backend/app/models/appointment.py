@@ -27,6 +27,8 @@ class Appointment(Base):
     diagnosis = Column(Text, nullable=True)
 
     slot = relationship("Slot", backref="appointments")
+    vitals = relationship("Vitals", back_populates="appointment", cascade="all, delete-orphan")
+    prescriptions = relationship("Prescription", back_populates="appointment", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Appointment(id={self.id}, patient_id={self.patient_id}, status={self.status})>"

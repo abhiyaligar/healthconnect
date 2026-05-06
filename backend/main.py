@@ -10,6 +10,7 @@ from app.api.v1.patients import router as patients_router
 from app.api.v1.history import router as history_router
 from app.api.v1.schedules import router as schedules_router
 from app.api.v1.analytics import router as analytics_router
+from app.api.v1.clinical import router as clinical_router
 
 settings = get_settings()
 
@@ -24,6 +25,7 @@ app.include_router(patients_router, prefix="/api/v1/patients", tags=["Patients"]
 app.include_router(history_router, prefix="/api/v1/history", tags=["History"])
 app.include_router(schedules_router, prefix="/api/v1/schedules", tags=["Schedules"])
 app.include_router(analytics_router, prefix="/api/v1/analytics", tags=["Analytics"])
+app.include_router(clinical_router, prefix="/api/v1/clinical", tags=["Clinical"])
 
 app.add_middleware(
     CORSMiddleware,
