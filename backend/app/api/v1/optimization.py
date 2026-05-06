@@ -4,7 +4,9 @@ from typing import List
 from app.core.database import get_db
 from app.services.optimization import OptimizationService
 from app.api.v1.auth import get_current_user
-from app.models import Appointment
+from app.models import Appointment, PatientProfile, DoctorProfile
+from app.services.email_service import EmailService
+from fastapi import BackgroundTasks
 
 router = APIRouter()
 
@@ -13,7 +15,7 @@ def get_optimization_suggestions(doctor_id: str, db: Session = Depends(get_db)):
     return OptimizationService.get_compaction_suggestions(db, doctor_id)
 
 @router.post("/apply")
-def apply_optimizations(suggestions: List[dict], db: Session = Depends(get_db)):
+def apply_optimizations(suggestions: List[dict], background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     from app.models.notification import Notification
     from app.models import Slot
     
@@ -34,6 +36,18 @@ def apply_optimizations(suggestions: List[dict], db: Session = Depends(get_db)):
                 message=msg
             )
             db.add(notif)
+            
+            # Send Email (Background Task)
+            patient_profile = db.query(PatientProfile).filter(PatientProfile.custom_id == apt.patient_id).first()
+            if patient_profile and patient_profile.email:
+                email_details = {
+                    "doctor_name": new_slot.doctor.full_name if new_slot.doctor else "Assigned Doctor",
+                    "date": new_slot.start_time.strftime("%Y-%m-%d"),
+                    "old_time": old_slot.start_time.strftime("%H:%M"),
+                    "new_time": new_slot.start_time.strftime("%H:%M"),
+                }
+                background_tasks.add_task(EmailService.send_emergency_reschedule, patient_profile.email, email_details)
+            
             updated_count += 1
     
     db.commit()

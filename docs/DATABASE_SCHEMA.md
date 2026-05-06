@@ -48,6 +48,8 @@ Stores links to files uploaded to Supabase Storage.
 - `id`: UUID (PK)
 - `user_id`: UUID
 - `full_name`: VARCHAR
+- `email`: VARCHAR
+- `mobile`: VARCHAR
 - `specialty`: VARCHAR
 - `bio`: TEXT
 - `avg_consultation_time`: INTEGER
@@ -57,9 +59,12 @@ Stores links to files uploaded to Supabase Storage.
 - `id`: UUID (PK)
 - `user_id`: UUID
 - `full_name`: VARCHAR
+- `email`: VARCHAR
+- `mobile`: VARCHAR
 - `date_of_birth`: DATE
 - `gender`: VARCHAR
 - `base_priority`: INTEGER
+- `medical_history`: TEXT
 
 ### `availability_templates`
 - `id`: UUID (PK)

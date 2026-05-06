@@ -9,6 +9,7 @@ class PatientProfile(Base):
     custom_id = Column(String, primary_key=True) # Generated as: 5-digits + NAME
     user_id = Column(UUID(as_uuid=True), unique=True, nullable=False)
     full_name = Column(String, nullable=True)
+    email = Column(String, nullable=True)
     mobile = Column(String, unique=True, nullable=True)
     date_of_birth = Column(Date, nullable=True)
     gender = Column(String, nullable=True)

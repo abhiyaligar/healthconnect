@@ -4,7 +4,9 @@ from sqlalchemy import func
 from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_user
-from app.models import Appointment, Slot, Notification
+from app.models import Appointment, Slot, Notification, PatientProfile, DoctorProfile
+from app.services.email_service import EmailService
+from fastapi import BackgroundTasks
 from pydantic import BaseModel
 from datetime import date, datetime
 import uuid
@@ -98,6 +100,7 @@ def get_emergency_preview(
 @router.post("/execute")
 def execute_emergency_move(
     request: EmergencyMoveRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
@@ -125,6 +128,20 @@ def execute_emergency_move(
                     message=msg
                 )
                 db.add(notif)
+
+                # Send Email (Background Task)
+                patient_profile = db.query(PatientProfile).filter(PatientProfile.custom_id == apt.patient_id).first()
+                doctor_profile = db.query(DoctorProfile).filter(DoctorProfile.custom_id == request.target_doctor_id or request.source_doctor_id).first()
+                
+                if patient_profile and patient_profile.email:
+                    email_details = {
+                        "old_time": item["original_time"],
+                        "new_time": item["suggested_time"],
+                        "doctor_name": doctor_profile.full_name if doctor_profile else "Assigned Doctor",
+                        "date": request.target_date.isoformat()
+                    }
+                    background_tasks.add_task(EmailService.send_emergency_reschedule, patient_profile.email, email_details)
+                
                 moves += 1
     
     db.commit()

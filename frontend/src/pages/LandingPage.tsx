@@ -57,7 +57,7 @@ const features = [
   { icon: CheckCircle2, label: 'Auto Overbooking Stabilization' },
 ];
 
-type Step = 'select' | 'login' | 'signup';
+type Step = 'select' | 'login' | 'signup' | 'verify' | 'forgot';
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -71,7 +71,15 @@ export default function LandingPage() {
   const [password, setPassword]     = useState('');
   const [showPass, setShowPass]     = useState(false);
   const [error, setError]           = useState('');
-  const [loading, setLoading]       = useState(false);
+  const [loading, setLoading] =       useState(false);
+  const [otp, setOtp]               = useState('');
+  const [resetSent, setResetSent]   = useState(false);
+  const [resendCooldown, setCooldown]= useState(0);
+  const [specialty, setSpecialty]   = useState('General');
+  const [bio, setBio]               = useState('');
+  const [dob, setDob]               = useState('');
+  const [gender, setGender]         = useState('');
+  const [medicalHistory, setMedHist]= useState('');
 
   const roleConfig = roles.find(r => r.id === selectedRole);
 
@@ -119,13 +127,65 @@ export default function LandingPage() {
         full_name: fullName.trim(),
         mobile: mobile.trim(),
         role: selectedRole?.toUpperCase(),
+        dob: selectedRole === 'patient' ? dob : null,
+        gender: selectedRole === 'patient' ? gender : null,
+        specialty: selectedRole === 'doctor' ? specialty : null,
+        bio: selectedRole === 'doctor' ? bio : null,
+        medical_history: selectedRole === 'patient' ? medicalHistory : null,
       });
       
-      // Auto login after signup or switch to login
-      setStep('login');
-      setError('Signup successful! Please login.');
+      setStep('verify');
+      setError('');
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Signup failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otp.trim()) return;
+    setLoading(true);
+    // Mocking OTP verification - in real app, call /auth/verify
+    setTimeout(() => {
+      setLoading(false);
+      setStep('login');
+      setError('Email verified! Please login.');
+    }, 1500);
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0) return;
+    setLoading(true);
+    try {
+      await api.post(`/auth/resend-otp?email=${email.trim()}`);
+      setCooldown(60);
+      setError('');
+    } catch (err: any) {
+      setError('Failed to resend code.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setCooldown(c => c - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setLoading(true);
+    try {
+      await api.post(`/auth/forgot-password?email=${email.trim()}`);
+      setResetSent(true);
+      setError('');
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to send reset link.');
     } finally {
       setLoading(false);
     }
@@ -206,14 +266,23 @@ export default function LandingPage() {
                   <p className="text-navy-500 text-sm mt-1">Select your role to continue</p>
                 </>
               )}
-              {(step === 'login' || step === 'signup') && roleConfig && (
+              {(step === 'login' || step === 'signup' || step === 'verify' || step === 'forgot') && roleConfig && (
                 <div className="flex items-center gap-3">
-                  <button onClick={() => { setStep('select'); setError(''); }} className="p-1.5 rounded-lg hover:bg-navy-50 text-navy-400 hover:text-navy-700 transition-colors">
+                  <button onClick={() => { 
+                    if (step === 'verify') setStep('signup');
+                    else if (step === 'forgot') setStep('login');
+                    else setStep('select'); 
+                    setError(''); 
+                  }} className="p-1.5 rounded-lg hover:bg-navy-50 text-navy-400 hover:text-navy-700 transition-colors">
                     <ChevronLeft size={20} />
                   </button>
                   <div>
-                    <h2 className="text-xl font-bold text-navy-900">{step === 'login' ? 'Login' : 'Sign Up'} as {roleConfig.label}</h2>
-                    <p className="text-sm text-navy-400">Enter your details to continue</p>
+                    <h2 className="text-xl font-bold text-navy-900">
+                      {step === 'login' ? 'Login' : step === 'signup' ? 'Sign Up' : step === 'verify' ? 'Verify Email' : 'Forgot Password'}
+                    </h2>
+                    <p className="text-sm text-navy-400">
+                      {step === 'verify' ? `Sent code to ${email}` : 'Enter your details to continue'}
+                    </p>
                   </div>
                 </div>
               )}
@@ -274,6 +343,73 @@ export default function LandingPage() {
                           required
                         />
                       </div>
+                      
+                      {selectedRole === 'patient' && (
+                        <>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-semibold text-navy-700 mb-1.5">Date of Birth</label>
+                              <input
+                                type="date"
+                                value={dob}
+                                onChange={e => setDob(e.target.value)}
+                                className="w-full px-4 py-3 border border-navy-200 rounded-xl text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-semibold text-navy-700 mb-1.5">Gender</label>
+                              <select
+                                value={gender}
+                                onChange={e => setGender(e.target.value)}
+                                className="w-full px-4 py-3 border border-navy-200 rounded-xl text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition"
+                                required
+                              >
+                                <option value="">Select</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold text-navy-700 mb-1.5">Medical History</label>
+                            <textarea
+                              value={medicalHistory}
+                              onChange={e => setMedHist(e.target.value)}
+                              placeholder="e.g. Allergies, chronic conditions..."
+                              className="w-full px-4 py-3 border border-navy-200 rounded-xl text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition"
+                              rows={2}
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {selectedRole === 'doctor' && (
+                        <>
+                          <div>
+                            <label className="block text-sm font-semibold text-navy-700 mb-1.5">Specialty</label>
+                            <input
+                              type="text"
+                              value={specialty}
+                              onChange={e => setSpecialty(e.target.value)}
+                              placeholder="e.g. Cardiology"
+                              className="w-full px-4 py-3 border border-navy-200 rounded-xl text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold text-navy-700 mb-1.5">Bio</label>
+                            <textarea
+                              value={bio}
+                              onChange={e => setBio(e.target.value)}
+                              placeholder="Describe your expertise..."
+                              className="w-full px-4 py-3 border border-navy-200 rounded-xl text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition"
+                              rows={2}
+                            />
+                          </div>
+                        </>
+                      )}
                     </>
                   )}
                   <div>
@@ -288,7 +424,12 @@ export default function LandingPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-navy-700 mb-1.5">Password</label>
+                    <div className="flex justify-between mb-1.5">
+                      <label className="text-sm font-semibold text-navy-700">Password</label>
+                      {step === 'login' && (
+                        <button type="button" onClick={() => setStep('forgot')} className="text-xs font-bold text-primary-600 hover:underline">Forgot Password?</button>
+                      )}
+                    </div>
                     <div className="relative">
                       <input
                         type={showPass ? 'text' : 'password'}
@@ -325,6 +466,78 @@ export default function LandingPage() {
                     </button>
                   </p>
                 </form>
+              )}
+
+              {step === 'verify' && (
+                <form onSubmit={handleVerifyOtp} className="space-y-6">
+                  <div className="text-center">
+                    <p className="text-sm text-navy-500 mb-4">We've sent a 6-digit code to your inbox. Please enter it below to verify your identity.</p>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={otp}
+                      onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
+                      placeholder="000000"
+                      className="w-full text-center text-3xl font-black tracking-[10px] py-4 border-2 border-navy-200 rounded-2xl focus:border-primary-500 focus:outline-none transition"
+                      required
+                    />
+                  </div>
+                  {error && <p className="text-sm text-status-error font-medium text-center">{error}</p>}
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-3 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl shadow-lg transition-all"
+                  >
+                    {loading ? 'Verifying...' : 'Verify & Continue'}
+                  </button>
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      onClick={handleResendOtp}
+                      disabled={resendCooldown > 0 || loading}
+                      className="text-sm font-bold text-primary-600 hover:underline disabled:text-navy-300"
+                    >
+                      {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : "Didn't receive code? Resend"}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {step === 'forgot' && (
+                <div className="space-y-6">
+                  {!resetSent ? (
+                    <form onSubmit={handleForgotPassword} className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-navy-700 mb-1.5">Email Address</label>
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={e => setEmail(e.target.value)}
+                          placeholder="Enter your registered email"
+                          className="w-full px-4 py-3 border border-navy-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-400 outline-none"
+                          required
+                        />
+                      </div>
+                      {error && <p className="text-sm text-status-error font-medium">{error}</p>}
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full py-3 bg-primary-600 text-white font-bold rounded-xl shadow-sm disabled:opacity-60"
+                      >
+                        {loading ? 'Sending...' : 'Send Reset Link'}
+                      </button>
+                    </form>
+                  ) : (
+                    <div className="text-center space-y-4">
+                      <div className="w-16 h-16 bg-status-open/10 text-status-open rounded-full flex items-center justify-center mx-auto mb-4">
+                        <CheckCircle2 size={32} />
+                      </div>
+                      <h3 className="text-lg font-bold text-navy-900">Email Sent!</h3>
+                      <p className="text-sm text-navy-500">Check your inbox for a link to reset your password. If you don't see it, check your spam folder.</p>
+                      <button onClick={() => setStep('login')} className="text-primary-600 font-bold hover:underline">Back to Login</button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>

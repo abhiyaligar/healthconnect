@@ -17,6 +17,9 @@ class SignupRequest(UserAuth):
     role: UserRole
     dob: Optional[str] = None
     gender: Optional[str] = None
+    specialty: Optional[str] = "General"
+    bio: Optional[str] = None
+    medical_history: Optional[str] = None
 
 class UserResponse(BaseModel):
     id: str

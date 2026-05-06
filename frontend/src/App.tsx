@@ -17,6 +17,7 @@ import ConflictResolution from './pages/ConflictResolution';
 import PatientProfileView from './pages/PatientProfileView';
 import DoctorProfileView from './pages/DoctorProfileView';
 import AppointmentDetails from './pages/AppointmentDetails';
+import ResetPassword from './pages/ResetPassword';
 
 function AppRoutes() {
   const { isLoggedIn, role } = useAuth();
@@ -31,6 +32,11 @@ function AppRoutes() {
             ? <Navigate to={roleHomePath(role)} replace />
             : <LandingPage />
         }
+      />
+
+      <Route
+        path="/reset-password"
+        element={<ResetPassword />}
       />
 
       {/* Protected routes — wrapped in Layout */}

@@ -10,13 +10,16 @@ from app.models import Appointment, Slot, PatientProfile, MedicalRecord, DoctorP
 from app.schemas.appointment import AppointmentCreate, AppointmentOut, ClinicalNotesUpdate, MedicalRecordOut
 from app.api.v1.auth import get_current_user
 from app.services.analytics import calculate_doctor_avg
+from app.services.email_service import EmailService
 from app.core.storage import upload_medical_file
+from fastapi import BackgroundTasks
 
 router = APIRouter()
 
 @router.post("/", response_model=AppointmentOut, status_code=status.HTTP_201_CREATED)
 def book_appointment(
     appointment: AppointmentCreate, 
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
@@ -100,6 +103,19 @@ def book_appointment(
     db.add(db_appointment)
     db.commit()
     db.refresh(db_appointment)
+
+    # 4. Send Confirmation Email (Background Task)
+    email_details = {
+        "doctor_name": db_slot.doctor.full_name,
+        "date": db_slot.start_time.strftime("%Y-%m-%d"),
+        "time": db_slot.start_time.strftime("%H:%M"),
+        "token": queue_token
+    }
+    # We use current_user.email for the patient who is booking
+    # If a receptionist is booking, we should fetch patient_profile.email
+    target_email = patient_profile.email or current_user.email
+    background_tasks.add_task(EmailService.send_appointment_confirmation, target_email, email_details)
+
     return db_appointment
 
 @router.get("/me", response_model=List[AppointmentOut])
@@ -129,7 +145,11 @@ def list_all_appointments(db: Session = Depends(get_db)):
     return db.query(Appointment).filter(Appointment.status != 'CANCELLED').all()
 
 @router.patch("/{appointment_id}/call", response_model=AppointmentOut)
-def start_consultation(appointment_id: UUID, db: Session = Depends(get_db)):
+def start_consultation(
+    appointment_id: UUID, 
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
     db_appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
     if not db_appointment:
         raise HTTPException(status_code=404, detail="Appointment not found")
@@ -138,10 +158,24 @@ def start_consultation(appointment_id: UUID, db: Session = Depends(get_db)):
     db_appointment.actual_start_time = datetime.now(timezone.utc)
     db.commit()
     db.refresh(db_appointment)
+
+    # Send "Turn Arrived" Email (Background Task)
+    patient_profile = db.query(PatientProfile).filter(PatientProfile.custom_id == db_appointment.patient_id).first()
+    if patient_profile and patient_profile.email:
+        email_details = {
+            "doctor_name": db_appointment.slot.doctor.full_name if db_appointment.slot and db_appointment.slot.doctor else "Your Doctor",
+            "room": "101" # Mock room number
+        }
+        background_tasks.add_task(EmailService.send_turn_arrival_notification, patient_profile.email, email_details)
+
     return db_appointment
 
 @router.patch("/{appointment_id}/no-show", response_model=AppointmentOut)
-def mark_no_show(appointment_id: UUID, db: Session = Depends(get_db)):
+def mark_no_show(
+    appointment_id: UUID,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
     db_appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
     if not db_appointment:
         raise HTTPException(status_code=404, detail="Appointment not found")
@@ -154,6 +188,18 @@ def mark_no_show(appointment_id: UUID, db: Session = Depends(get_db)):
         
     db.commit()
     db.refresh(db_appointment)
+
+    # Send Email (Background Task)
+    patient_profile = db.query(PatientProfile).filter(PatientProfile.custom_id == db_appointment.patient_id).first()
+    if patient_profile and patient_profile.email:
+        email_details = {
+            "doctor_name": db_appointment.slot.doctor.full_name if db_appointment.slot and db_appointment.slot.doctor else "Assigned Doctor",
+            "date": db_appointment.slot.start_time.strftime("%Y-%m-%d") if db_appointment.slot else "N/A",
+            "time": db_appointment.slot.start_time.strftime("%H:%M") if db_appointment.slot else "N/A",
+            "reason": "No-show recorded"
+        }
+        background_tasks.add_task(EmailService.send_appointment_cancellation, patient_profile.email, email_details)
+
     return db_appointment
 
 @router.patch("/{appointment_id}/bump", response_model=AppointmentOut)
@@ -165,6 +211,37 @@ def bump_priority(appointment_id: UUID, db: Session = Depends(get_db)):
     db_appointment.priority_score += 5
     db.commit()
     db.refresh(db_appointment)
+    return db_appointment
+
+@router.patch("/{appointment_id}/cancel", response_model=AppointmentOut)
+def cancel_appointment(
+    appointment_id: UUID,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    db_appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
+    if not db_appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+    
+    db_appointment.status = "CANCELLED"
+    if db_appointment.slot:
+        db_appointment.slot.status = "OPEN"
+        
+    db.commit()
+    db.refresh(db_appointment)
+
+    # Send Email (Background Task)
+    patient_profile = db.query(PatientProfile).filter(PatientProfile.custom_id == db_appointment.patient_id).first()
+    if patient_profile and patient_profile.email:
+        email_details = {
+            "doctor_name": db_appointment.slot.doctor.full_name if db_appointment.slot and db_appointment.slot.doctor else "Assigned Doctor",
+            "date": db_appointment.slot.start_time.strftime("%Y-%m-%d") if db_appointment.slot else "N/A",
+            "time": db_appointment.slot.start_time.strftime("%H:%M") if db_appointment.slot else "N/A",
+            "reason": "Cancelled by user/staff"
+        }
+        background_tasks.add_task(EmailService.send_appointment_cancellation, patient_profile.email, email_details)
+
     return db_appointment
 
 @router.patch("/{appointment_id}/complete", response_model=AppointmentOut)

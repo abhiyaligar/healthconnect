@@ -4,10 +4,14 @@
 
 ### `POST /api/v1/auth/signup`
 Creates a new user and initializes their profile.
-- **Body**: `email`, `password`, `full_name`, `role` (DOCTOR/PATIENT).
+- **Body**: `email`, `password`, `full_name`, `mobile`, `role` (DOCTOR/PATIENT), `dob` (optional), `gender` (optional), `specialty` (optional), `bio` (optional), `medical_history` (optional).
 - **Safety Valves**:
     - `403 Forbidden`: Returned if a doctor is fatigued (delay > 40m) and overbooking is attempted.
     - `429 Too Many Requests`: Returned if the lobby walk-in rate limit (5/15m) is exceeded.
+    
+### `POST /api/v1/auth/forgot-password`
+Triggers a password recovery email to the user.
+- **Query Params**: `email`.
 
 ## Appointments & Clinical
 

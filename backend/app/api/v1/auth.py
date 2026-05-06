@@ -7,6 +7,11 @@ from app.models.doctor import DoctorProfile
 from app.models.patient import PatientProfile
 from sqlalchemy.orm import Session
 from gotrue.errors import AuthApiError
+from app.services.email_service import EmailService
+from fastapi import BackgroundTasks
+import random
+import string
+import uuid as uuid_pkg
 
 router = APIRouter()
 security = HTTPBearer()
@@ -28,7 +33,7 @@ async def get_current_user(token: HTTPAuthorizationCredentials = Depends(securit
         )
 
 @router.post("/signup", response_model=UserResponse)
-async def signup(user_data: SignupRequest, db: Session = Depends(get_db)):
+async def signup(user_data: SignupRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     supabase = get_supabase()
     try:
         # 1. Sign up in Supabase with metadata
@@ -58,9 +63,11 @@ async def signup(user_data: SignupRequest, db: Session = Depends(get_db)):
             db_profile = DoctorProfile(
                 user_id=user_id,
                 full_name=user_data.full_name,
+                email=user_data.email,
                 mobile=user_data.mobile,
                 custom_id=custom_id,
-                specialty="General"
+                specialty=user_data.specialty or "General",
+                bio=user_data.bio
             )
         else:
             # Generate custom_id: first 5 of mobile + 4 chars of name
@@ -71,15 +78,22 @@ async def signup(user_data: SignupRequest, db: Session = Depends(get_db)):
             db_profile = PatientProfile(
                 user_id=user_id,
                 full_name=user_data.full_name,
+                email=user_data.email,
                 mobile=user_data.mobile,
                 custom_id=custom_id,
                 base_priority=0,
                 date_of_birth=user_data.dob if user_data.dob else None,
-                gender=user_data.gender
+                gender=user_data.gender,
+                medical_history=user_data.medical_history
             )
         
         db.add(db_profile)
         db.commit()
+        
+        # 3. Send Verification Email (Background Task)
+        # Mocking a code for demonstration
+        verify_code = ''.join(random.choices(string.digits, k=6))
+        background_tasks.add_task(EmailService.send_verification_email, user_data.email, verify_code)
         
         return UserResponse(
             id=response.user.id,
@@ -135,3 +149,18 @@ async def get_me(current_user = Depends(get_current_user)):
         full_name=user_meta.get("full_name"),
         role=user_meta.get("role")
     )
+
+@router.post("/forgot-password")
+async def forgot_password(email: str, background_tasks: BackgroundTasks):
+    # In a real app, generate a reset token and store it
+    # For now, simulate sending a link
+    reset_link = f"https://healthconnect-app.vercel.app/reset-password?email={email}&token={uuid_pkg.uuid4()}"
+    background_tasks.add_task(EmailService.send_password_reset_email, email, reset_link)
+    return {"message": "If this email is registered, a reset link has been sent."}
+
+
+@router.post('/resend-otp')
+async def resend_otp(email: str, background_tasks: BackgroundTasks):
+    verify_code = ''.join(random.choices(string.digits, k=6))
+    background_tasks.add_task(EmailService.send_verification_email, email, verify_code)
+    return {'message': 'A new verification code has been sent to your email.'}

@@ -15,6 +15,14 @@ class Settings(BaseSettings):
     SUPABASE_STORAGE_REGION: str = "ap-south-1"
     AWS_ACCESS_KEY_ID: str = ""
     AWS_SECRET_ACCESS_KEY: str = ""
+    
+    # SMTP Configuration
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = ""
+    SMTP_FROM_NAME: str = "HealthConnect"
 
 @lru_cache()
 def get_settings():
