@@ -1,190 +1,116 @@
-# Technology Stack Documentation
+# Technology Stack
 
-## 1. Stack Overview
-
-**Last Updated**: 2026-05-05
-**Architecture**: Modular Monolith with Serverless Realtime (Supabase)
+**Project**: HealthConnect  
+**Architecture**: Modular Monolith with Serverless Auth & Storage  
+**Last Updated**: 2026-05-06
 
 ---
 
-## 2. Frontend Stack
+## Frontend
 
-### Core Framework
-- **Framework**: React
-- **Version**: 18.2.0
-- **Documentation**: https://react.dev
-- **License**: MIT
-- **Reason**: Component-based architecture, Real-time UI handling, Strong ecosystem
-
-### Build Tool
-- **Tool**: Vite
-- **Version**: 5.1.0
-- **Reason**: Fast dev server, Lightweight vs CRA
-
-### Language
-- **Language**: TypeScript
-- **Version**: 5.3.3
-- **Reason**: Type safety for complex state (queue, scheduling), Prevents runtime bugs
-
-### Styling
-- **Framework**: Tailwind CSS
-- **Version**: 3.4.1
-- **Reason**: Matches UI design, Rapid iteration, Utility-first consistency
+| Technology | Version | Purpose |
+|-----------|---------|---------|
+| React | 18.2.0 | Component-based UI framework |
+| TypeScript | 5.3.3 | Type safety for complex state (queue, scheduling) |
+| Vite | 5.1.0 | Fast dev server and build tool |
+| Tailwind CSS | 3.4.1 | Utility-first styling |
+| React Router | 6.x | Client-side routing with role-based protection |
+| Axios | 1.6.5 | HTTP client for API calls |
+| lucide-react | 0.312.0 | Icon library |
+| clsx + tailwind-merge | — | Dynamic class composition |
 
 ### State Management
-- **Library**: Zustand
-- **Version**: 4.5.2
-- **Reason**: Minimal boilerplate, Good for real-time UI state
-- **Alternatives Rejected**: Redux (overhead), Context API (performance limits)
+- **Auth state**: Custom `AuthContext` (`useAuth` hook) — stores token, role, user profile
+- **Server data**: Direct `api.get()` calls inside component `useEffect` hooks — no React Query in current implementation
 
-### Data Fetching / Server State
-- **Library**: @tanstack/react-query
-- **Version**: 5.17.19
-- **Reason**: Cache + sync API data, Handles stale data
-
-### WebSocket Client
-- **Library**: native WebSocket API
-- **Reason**: Lightweight, No abstraction needed
-
-### Form Handling
-- **Library**: React Hook Form
-- **Version**: 7.49.3
-- **Validation**: Zod 3.22.4
-
-### HTTP Client
-- **Library**: Axios
-- **Version**: 1.6.5
-
-### UI Utilities
-- **Icons**: lucide-react 0.312.0
-
----
-
-## 3. Backend Stack
-
-### Runtime
-- **Platform**: Python
-- **Version**: 3.11.8
-- **Reason**: Async support, FastAPI compatibility
-
-### Framework
-- **Framework**: FastAPI
-- **Language**: Python 3.11+
-- **ORM**: SQLAlchemy 2.0 (Sync/Async capable)
-- **Database**: PostgreSQL (Supabase)
-- **Real-time Engine**: Supabase Realtime (Replaces custom WebSockets/Redis for high-speed queue updates)
-- **File Storage**: Supabase Storage (Buckets for prescriptions/profiles)
-
----
-
-## 7. Environment Variables
-
+### Frontend Scripts
 ```bash
+npm run dev      # Start dev server → http://localhost:5173
+npm run build    # Production bundle
+npm run preview  # Preview production build locally
+```
+
+---
+
+## Backend
+
+| Technology | Version | Purpose |
+|-----------|---------|---------|
+| Python | 3.11+ | Runtime |
+| FastAPI | 0.110.0 | REST API framework |
+| Uvicorn | 0.27.1 | ASGI server |
+| SQLAlchemy | 2.0 | ORM (synchronous session) |
+| Alembic | 1.13.1 | Database migrations |
+| Pydantic | v2 | Request/response validation and serialization |
+| supabase-py | — | Supabase Auth and Storage client |
+
+### Backend Scripts
+```bash
+uvicorn main:app --reload     # Start dev server → http://localhost:8000
+alembic upgrade head          # Apply latest migrations
+alembic revision --autogenerate -m "description"  # Generate migration
+pytest                        # Run test suite
+```
+
+---
+
+## Infrastructure
+
+| Service | Purpose |
+|---------|---------|
+| Supabase (PostgreSQL) | Primary relational database |
+| Supabase Auth | JWT-based identity and role management |
+| Supabase Storage | S3-compatible file storage for medical records |
+| SMTP (Gmail / Custom) | Transactional email — OTP & notifications |
+
+---
+
+## Environment Variables
+
+```env
 # Database
-DATABASE_URL=postgresql+asyncpg://...
+DATABASE_URL=postgresql://user:pass@host:5432/dbname
 
-# Redis
-REDIS_URL=redis://localhost:6379
+# Supabase
+SUPABASE_URL=https://<project-id>.supabase.co
+SUPABASE_KEY=<anon-public-key>
+SUPABASE_SERVICE_ROLE_KEY=<service-role-secret-key>
 
-# Auth
-JWT_SECRET=super_secret_key
-JWT_ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=15
-
-# App
-ENV=development
-API_BASE_URL=http://localhost:8000
+# SMTP (Email)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your@email.com
+SMTP_PASS=your-app-password
+FROM_EMAIL=noreply@healthconnect.com
 ```
+
+> ⚠️ `SUPABASE_SERVICE_ROLE_KEY` must **never** be exposed to the frontend or committed to version control. It is used exclusively by the backend for admin-level user creation and password resets.
 
 ---
 
-## 8. Scripts
+## Security Decisions
 
-### Frontend
-```json
-{
-  "dev": "vite",
-  "build": "vite build",
-  "preview": "vite preview",
-  "lint": "eslint .",
-  "format": "prettier --write ."
-}
-```
-
-### Backend
-```bash
-uvicorn app.main:app --reload
-alembic upgrade head
-```
+| Area | Approach |
+|------|----------|
+| Auth | Supabase JWT — short-lived tokens, validated per request |
+| Password Reset | 6-digit OTP via SMTP, 10-min expiry, single-use (`is_used` flag) |
+| Role Enforcement | Role stored in Supabase `user_metadata`, checked server-side per route |
+| Admin Actions | Require `SUPABASE_SERVICE_ROLE_KEY` — not the anon key |
+| CORS | `allow_origins=["*"]` in development — **must restrict in production** |
+| Medical Data | Access-controlled: only the patient or their assigned doctor can view records |
 
 ---
 
-## 9. Dependencies Lock
+## Version Upgrade Policy
 
-### Frontend
-```json
-{
-  "react": "18.2.0",
-  "react-dom": "18.2.0",
-  "typescript": "5.3.3",
-  "vite": "5.1.0",
-  "tailwindcss": "3.4.1",
-  "zustand": "4.5.2",
-  "@tanstack/react-query": "5.17.19",
-  "react-hook-form": "7.49.3",
-  "zod": "3.22.4",
-  "axios": "1.6.5",
-  "lucide-react": "0.312.0"
-}
-```
-
-### Backend
-```json
-{
-  "fastapi": "0.110.0",
-  "uvicorn": "0.27.1",
-  "sqlalchemy": "2.0.25",
-  "alembic": "1.13.1",
-  "redis": "5.0.1",
-  "python-jose": "3.3.0",
-  "passlib": "1.7.4",
-  "asyncpg": "0.29.0"
-}
-```
+- **Major updates**: Quarterly review; test in staging environment first
+- **Minor updates**: Monthly, no breaking changes expected
+- **Breaking changes**: Must be documented in CHANGELOG before applying
 
 ---
 
-## 10. Security Considerations
+## Notes
 
-### Authentication
-- JWT (short-lived tokens)
-- HTTP-only cookies (recommended in prod)
-
-### Passwords
-- bcrypt hashing (12 rounds)
-
-### Rate Limiting
-- Redis-based
-
----
-
-## 11. Version Upgrade Policy
-
-### Major Updates
-- Quarterly review
-- Test in staging
-
-### Minor Updates
-- Monthly
-
-### Breaking Changes
-- Must be documented before update
-
----
-
-## Critical Notes
-This stack is:
-- Fully aligned with your system complexity
-- Real-time capable
-- Scalable beyond MVP
-- Avoids unnecessary complexity (no microservices yet)
+- The project does **not** currently use Redis or WebSockets. Supabase Realtime is available but queue polling (`setInterval(fetchData, 10000)`) is used in `QueuePanel.tsx` for simplicity.
+- The frontend does **not** currently use React Query or Zustand — state is managed via React `useState` / `useContext`.
+- `react-hook-form` and `zod` are listed as dependencies but not yet broadly used; form handling is currently done with controlled inputs.

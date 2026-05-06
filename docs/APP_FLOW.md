@@ -1,291 +1,333 @@
-# Application Flow Documentation (APP_FLOW.md)
+# Application Flow
 
-## 1. Entry Points
-
-### Primary Entry Points
-- **Reception Dashboard** (Primary System Entry)
-  - Used by receptionist to manage queues and conflicts
-  - Loads real-time queue state via WebSocket
-- **Patient Booking Interface**
-  - Entry via hospital kiosk / web app
-  - Starts booking flow (specialty → doctor → slot)
-- **Doctor Panel**
-  - Entry for doctors to view schedule + fatigue
-- **Admin Dashboard**
-  - Entry for analytics and system monitoring
-
-### Secondary Entry Points
-- **Deep Links**
-  - Notification-based (e.g., rescheduled appointment)
-- **System-triggered UI updates**
-  - Conflict alerts
-  - Cancellation storm alerts
+**Last Updated**: 2026-05-06
 
 ---
 
-## 2. Core User Flows
+## 1. Entry Points & Role Routing
 
-### Flow 1: Patient Appointment Booking
-- **Goal**: Book a slot with awareness of overbooking
-- **Entry Point**: Patient UI
-- **Frequency**: High
+When a user logs in, `AuthContext` reads the `role` from Supabase `user_metadata` and redirects to their home dashboard:
 
-#### Happy Path
-1. **Page: Select Specialty**
-   - User selects department (e.g., Cardiology)
-   - Trigger → Load doctors
-2. **Page: Select Doctor**
-   - Displays doctor profile + rating
-   - User selects doctor
-   - Trigger → Load available slots
-3. **Page: Select Slot**
-   - Slot states: Green = Available, Yellow = Overbooked, Red = Full
-   - User selects slot
-4. **System Action**
-   - Calculates: Estimated wait time, Overbooking risk, Priority classification (P1/P2/P3)
-5. **Page: Confirmation Panel**
-   - Shows: Token number, Wait time, Overbooking warning (if applicable)
-6. **User Action**
-   - Clicks "Confirm Appointment"
-7. **System Action**
-   - Inserts into queue
-   - Updates real-time queue
+| Role | Landing Route | Dashboard |
+|------|--------------|-----------|
+| `patient` | `/dashboard` | `PatientDashboard` |
+| `doctor` | `/doctors` | `DoctorDashboard` |
+| `receptionist` | `/reception` | `ReceptionDashboard` |
+| `admin` | `/analytics` | `AdminDashboard` |
 
-#### Error States
-- **Slot becomes full**
-  - Display: "Slot no longer available"
-  - Action: Refresh slots
-- **High overload**
-  - Display: "High delay expected (> X min)"
-
-#### Edge Cases
-- User selects overbooked slot → later gets rescheduled
-- Multiple users booking same slot concurrently
-
-#### Exit Points
-- **Success** → Appointment confirmed
-- **Abort** → User exits flow
+Public routes: `/` (Landing Page), `/reset-password`
 
 ---
 
-### Flow 2: Reception Queue Management
-- **Goal**: Manage live queue and patient flow
-- **Entry Point**: Reception Dashboard
+## 2. Authentication Flow
 
-#### Happy Path
-1. **Page: Dashboard Load**
-   - WebSocket connects
-   - Loads queue + doctor panels
-2. **Reception Actions**
-   - Call Next → Moves patient to "In Consultation"
-   - Mark No-show → Removes from queue
-   - Bump Priority → Upgrades priority
-3. **System Updates**
-   - Reorders queue
-   - Updates wait times
-
-#### Error States
-- **Network delay**
-  - Display: "Reconnecting..."
-- **Action conflict**
-  - Example: Patient already called elsewhere
-
-#### Edge Cases
-- Multiple receptionists modifying queue
-- Simultaneous actions on same patient
-
----
-
-### Flow 3: Conflict Detection & Resolution
-- **Goal**: Resolve overbooking conflicts
-- **Entry Point**: System-triggered
-
-#### Happy Path
-1. **System Detects Conflict**
-   - Conditions: Slot capacity exceeded, Doctor double-booked
-2. **System Generates Solutions**
-   - Candidate patients for rescheduling
-   - Alternative slots
-3. **Page: Conflict Panel**
-   - Displays: Conflict details, Suggested actions
-4. **User Action**
-   - Option A: Auto-resolve
-   - Option B: Manual override
-5. **System Action**
-   - Applies changes
-   - Updates queue + slots
-
-#### Error States
-- **No alternative slots available**
-- **High-priority conflict (P1 vs P1)**
-
-#### Edge Cases
-- Multiple conflicts simultaneously
-- Conflict during reschedule operation
-
-#### Exit Points
-- **Conflict resolved**
-- **Escalated** (manual handling required)
-
----
-
-### Flow 4: Cancellation Storm Handling (System Flow)
-- **Goal**: Stabilize schedule during mass cancellations
-
-#### Happy Path
-1. **System Monitors Cancellation Rate**
-2. **Threshold Breach Detected**
-3. **Trigger Alert**
-   - UI shows "Cancellation Storm"
-4. **System Action**
-   - Rebalance queue
-   - Fill gaps with waiting patients
-5. **Reception Action**
-   - Option to trigger batch reschedule
-
-#### Edge Cases
-- Simultaneous booking spike
-- Doctor unavailable mid-storm
-
----
-
-### Flow 5: Doctor Schedule & Fatigue Monitoring
-- **Goal**: Prevent overload
-
-#### Happy Path
-1. **Doctor Views Schedule**
-2. **System Calculates Fatigue**
-   - Based on: Patients seen, Time active
-3. **Threshold Reached**
-   - Alert triggered
-4. **System Action**
-   - Adjusts scheduling weight
-   - Reduces booking priority
-
-#### Edge Cases
-- Doctor overrides fatigue
-- Emergency patient (P1) bypasses limit
-
----
-
-## 3. Navigation Map
-
-```text
-Dashboard (Reception)
-├── Queue Panel
-├── Conflict Panel
-├── Doctor Panel
-├── Walk-in Form
-├── Alerts
-
-Patient App
-├── Patient Dashboard (Home)
-│   ├── Upcoming Appointment
-│   └── Medical History
-├── Specialty Selection
-├── Doctor Selection
-├── Slot Selection (with Date Picker)
-└── Confirmation
-
-Doctor Panel
-├── My Schedule (Consultations)
-├── Scheduling (Availability Templates)
-└── Fatigue Monitoring
-
-Admin Control Center
-├── Analytics (Main Landing)
-│   ├── KPI Strip
-│   ├── Hourly Volume
-│   └── Doctor Load
-├── Admin Panel (User Mgmt & Logs)
-├── Queue Panel
-├── Scheduling (Doctor Templates & Launch)
-└── Conflict Panel
+```
+Landing Page
+    │
+    ├── Login (email + password)
+    │       │
+    │       ▼
+    │   POST /auth/login ──────────────► Supabase Auth validates credentials
+    │       │                            Returns JWT + user_metadata (role)
+    │       ▼
+    │   AuthContext.setUser(token, role)
+    │       │
+    │       ▼
+    │   Navigate to role home
+    │
+    └── Forgot Password
+            │
+            ▼
+        POST /auth/forgot-password?email=...
+            │  Generates 6-digit OTP (10 min TTL)
+            │  Sends via SMTP email
+            ▼
+        /reset-password page
+            │  User enters email + OTP + new password
+            ▼
+        POST /auth/reset-password
+            │  Validates OTP, marks is_used=true
+            │  Updates password via Supabase Admin API
+            ▼
+        Redirect to login
 ```
 
 ---
 
-## 4. Screen Inventory
+## 3. Core User Flows
 
-### Screen: Patient Dashboard
-- **Route**: `/dashboard`
-- **Access**: Authenticated (Patient)
-- **Purpose**: Overview of upcoming and past appointments.
+### Flow A — Patient Appointment Booking (`/book`)
 
-### Screen: Patient Booking
-- **Route**: `/book`
-- **Access**: Authenticated (Patient/Admin)
-- **Purpose**: New appointment booking flow with calendar integration.
+```
+Step 1: Select Specialty
+    GET /doctors/ → extract unique specialties
+    User clicks specialty → GET /doctors/recommend?specialty=X
 
-### Screen: Scheduling Manager
-- **Route**: `/scheduling`
-- **Access**: Authenticated (Doctor/Receptionist)
-- **Purpose**: Manage weekly templates and launch daily slots.
+Step 2: Select Doctor
+    Doctor cards shown (sorted by current load)
+    User selects → proceed to slot selection
+
+Step 3: Select Time Slot
+    GET /slots/?doctor_id=X&date=YYYY-MM-DD
+    User picks an OPEN slot
+
+Step 4: Enter Details
+    Symptoms, severity, optional medical history (frontend only, not sent to backend yet)
+    User clicks "Confirm"
+
+Step 5: Confirm
+    POST /appointments/  { slot_id }
+    Response: { queue_token, priority_score, status: CONFIRMED }
+    ✅ Success screen with token number
+```
+
+**Safety Valves** during booking:
+- `403` — Doctor fatigue (running 40+ min late)
+- `429` — Walk-in rate limit (5 bookings per 15 min)
+- `400` — Slot at max overbooking capacity
 
 ---
 
-## 5. Decision Points
+### Flow B — Reception Queue Management (`/queue`)
 
-### Decision: Slot Booking
-```text
-IF slot capacity < limit
-THEN allow normal booking
-ELSE IF slot overbook threshold not exceeded
-THEN allow booking with warning
-ELSE
-THEN block booking
 ```
+Page Load
+    GET /appointments/all (paginated, page=1, limit=10)
+    GET /doctors/
+    Auto-polls every 10 seconds
 
-### Decision: Conflict Resolution
-```text
-IF conflict severity = low
-THEN auto-resolve
-ELSE IF severity = medium
-THEN suggest resolution
-ELSE
-THEN require manual override
-```
+Reception Actions:
+    "Call" → PATCH /appointments/{id}/call
+              status: CONFIRMED → IN_PROGRESS
+              records actual_start_time
 
-### Decision: Priority Handling
-```text
-IF patient priority = P1
-THEN override queue order
-ELSE IF P2
-THEN moderate priority
-ELSE
-THEN FIFO
+    "Bump" → PATCH /appointments/{id}/bump
+              increases priority_score
+
+    "No Show" → PATCH /appointments/{id}/no-show
+                 status: CANCELLED
 ```
 
 ---
 
-## 6. Error Handling Flows
+### Flow C — Doctor Consultation (`/doctors`)
 
-- **Network Failure**
-  - Display: "Reconnecting..."
-  - Retry automatically
-- **Conflict Failure**
-  - Display: "Unable to resolve automatically"
-  - Action: Manual override required
-- **Slot Booking Failure**
-  - Display: "Slot unavailable"
-  - Suggest alternatives
+```
+Page Load
+    GET /doctors/me (profile + avg_consultation_time)
+    GET /appointments/doctor/me (today's queue, paginated)
+
+Doctor selects a patient card
+    Side panel opens
+    GET /history/{patient_id} (clinical history, paginated)
+    GET /clinical/vitals/history/{patient_id}
+    GET /clinical/prescription/{appointment_id}
+
+"Start Consultation"
+    PATCH /appointments/{id}/call → IN_PROGRESS
+
+During consultation:
+    Fill vitals → POST /clinical/vitals
+    ICD-10 diagnosis search → GET /clinical/icd10?query=...
+    Clinical notes → saved in form state
+    Add prescriptions → PrescriptionBuilder
+    Save all → PATCH /appointments/{id}/clinical-notes
+              → POST /clinical/vitals
+              → POST /clinical/prescription
+
+"Complete & Close"
+    PATCH /appointments/{id}/complete → COMPLETED
+    Triggers recalculation of doctor's avg_consultation_time
+```
+
+---
+
+### Flow D — Admin User Management (`/admin`)
+
+```
+Tab: Users
+    GET /admin/users?query=...&page=1&limit=10
+    Displays paginated user table (Doctors + Patients)
+    Actions:
+        - Change Role → PATCH /admin/users/{id}/role
+        - Toggle Status → PATCH /admin/users/{id}/status
+        - Add New User → POST /admin/users (modal form)
+            Uses SUPABASE_SERVICE_ROLE_KEY
+            Creates Supabase Auth user + DB profile atomically
+            Writes AuditLog entry
+
+Tab: Audit Logs
+    GET /admin/audit-logs?page=1&limit=10
+    Paginated list of all admin actions
+
+Tab: Settings
+    GET /admin/settings
+    POST /admin/settings { key: value }
+```
+
+---
+
+### Flow E — Password Reset (OTP-Based)
+
+```
+User clicks "Forgot Password"
+    POST /auth/forgot-password?email=...
+    Backend generates 6-digit OTP
+    Stores in otp_records (purpose=RESET_PASSWORD, expires=+10min)
+    Sends via SMTP in background task
+
+User receives email, navigates to /reset-password
+    Enters: email + OTP + new password
+    POST /auth/reset-password
+    Backend validates OTP:
+        - Matches stored code?
+        - Not expired?
+        - Not already used?
+    If valid:
+        Updates password via Supabase Admin API
+        Marks OTP as is_used=true
+    Redirect to login
+```
+
+---
+
+### Flow F — Walk-in Patient Registration (`/reception/walkin`)
+
+```
+Step 1: Create Account
+    POST /auth/signup (role=PATIENT, auto-generated password)
+    System creates Supabase Auth user + PatientProfile
+
+Step 2: Assign Slot
+    GET /doctors/ (paginated)
+    Receptionist selects a doctor
+    GET /slots/?doctor_id=X (filter OPEN)
+    Receptionist selects a slot
+
+Booking:
+    POST /appointments/ { slot_id, patient_id }
+    Patient added to live queue
+```
+
+---
+
+### Flow G — Schedule Management (`/scheduling`)
+
+```
+Doctor / Receptionist
+    │
+    ├── View weekly availability grid
+    │       GET /schedules/availability?doctor_id=X
+    │
+    ├── Add block
+    │       POST /schedules/availability
+    │       { doctor_id, day_of_week, start_time, end_time }
+    │
+    ├── Delete block
+    │       DELETE /schedules/availability/{id}
+    │
+    ├── Launch for date
+    │       POST /schedules/launch { doctor_id, date }
+    │       Generates Slot records for the day
+    │
+    └── Bulk launch (next 7 days)
+            POST /schedules/launch/bulk?doctor_id=X&days=7
+```
+
+---
+
+## 4. Navigation Map
+
+```
+/ (Landing Page — public)
+│
+├── /reset-password (public)
+│
+├── /dashboard (patient)
+│   └── /book
+│   └── /appointment/:id
+│   └── /patient/profile
+│
+├── /doctors (doctor)
+│   └── /doctor/profile
+│   └── /scheduling
+│
+├── /reception (receptionist)
+│   └── /reception/walkin
+│   └── /reception/conflicts
+│   └── /queue
+│   └── /conflicts
+│   └── /scheduling
+│
+└── /analytics (admin)
+    └── /admin
+    └── /queue
+    └── /scheduling
+    └── /conflicts
+```
+
+---
+
+## 5. Paginated Response Convention
+
+All list-returning GET endpoints follow this envelope:
+
+```json
+{
+  "items": [...],
+  "total": 42,
+  "page": 1,
+  "size": 10,
+  "pages": 5
+}
+```
+
+Frontend pages store `page` state and send `?page=N&limit=10` query params. Admin Panel has explicit Previous/Next pagination controls.
+
+---
+
+## 6. Error States
+
+| HTTP Status | Meaning | Typical Cause |
+|-------------|---------|---------------|
+| `400` | Bad Request | Validation failure, slot full |
+| `401` | Unauthorized | Missing or invalid JWT |
+| `403` | Forbidden | Wrong role, or doctor fatigue valve |
+| `404` | Not Found | Resource doesn't exist |
+| `409` | Conflict | Email already registered |
+| `422` | Unprocessable | FastAPI validation error |
+| `429` | Too Many Requests | Walk-in rate limit exceeded |
+| `500` | Server Error | Unexpected backend failure |
 
 ---
 
 ## 7. Responsive Behavior
 
-- **Mobile (Patient)**
-  - Step-by-step booking flow
-  - Single-column layout
-- **Desktop (Reception/Admin)**
-  - Multi-panel dashboards
-  - Real-time updates
+| Viewport | Layout |
+|----------|--------|
+| Mobile (Patient) | Single-column step-by-step booking flow |
+| Tablet | Two-column grids |
+| Desktop (Reception/Admin) | Multi-panel dashboards with side panels |
 
 ---
 
-## 8. Animations & Transitions
+## 8. Screen Inventory
 
-- **Queue updates**: smooth reorder animation
-- **Conflict alerts**: pulse/red highlight
-- **Slot selection**: color transition
-- **Loading**: skeleton + spinner
+| Route | Component | Access |
+|-------|-----------|--------|
+| `/` | `LandingPage` | Public |
+| `/reset-password` | `ResetPassword` | Public |
+| `/dashboard` | `PatientDashboard` | Patient |
+| `/book` | `PatientBooking` | Patient |
+| `/appointment/:id` | `AppointmentDetails` | Patient |
+| `/patient/profile` | `PatientProfileView` | Patient |
+| `/doctors` | `DoctorDashboard` | Doctor |
+| `/doctor/profile` | `DoctorProfileView` | Doctor |
+| `/scheduling` | `ScheduleManager` | Doctor, Receptionist |
+| `/reception` | `ReceptionDashboard` | Receptionist |
+| `/reception/walkin` | `WalkinRegistration` | Receptionist |
+| `/reception/conflicts` | `ConflictResolution` | Receptionist |
+| `/queue` | `QueuePanel` | Receptionist, Admin |
+| `/conflicts` | `ConflictsPanel` | Receptionist, Admin |
+| `/analytics` | `AdminDashboard` | Admin |
+| `/admin` | `AdminPanel` | Admin |
