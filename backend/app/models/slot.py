@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Integer, ForeignKey, Boolean
+from sqlalchemy import Column, String, DateTime, Integer, ForeignKey, Boolean, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 import uuid
@@ -13,6 +13,10 @@ class Slot(Base):
     end_time = Column(DateTime(timezone=True), nullable=False)
     status = Column(String, default="OPEN")  # OPEN, CLOSED, OVERBOOKED, CANCELLED
     max_capacity = Column(Integer, default=1)
+    
+    __table_args__ = (
+        UniqueConstraint('doctor_id', 'start_time', name='uix_doctor_slot_time'),
+    )
     
     doctor = relationship("DoctorProfile", back_populates="slots")
     

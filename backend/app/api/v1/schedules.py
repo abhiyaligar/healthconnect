@@ -61,7 +61,21 @@ def launch_schedule(request: ScheduleLaunchRequest, db: Session = Depends(get_db
     if not templates:
         raise HTTPException(status_code=400, detail=f"No active availability templates found for {target_date.strftime('%A')}")
     
-    # 4. Generate slots
+    # 4. Get existing slots for this doctor on this day to avoid duplicates efficiently
+    # We query for the whole day range
+    day_start = datetime.combine(target_date, time.min).replace(tzinfo=timezone.utc)
+    day_end = datetime.combine(target_date, time.max).replace(tzinfo=timezone.utc)
+    
+    existing_slots = db.query(Slot).filter(
+        Slot.doctor_id == request.doctor_id,
+        Slot.start_time >= day_start,
+        Slot.start_time <= day_end
+    ).all()
+    
+    # Store existing start times in a set for O(1) lookup
+    existing_times = {s.start_time.astimezone(timezone.utc) for s in existing_slots}
+    
+    # 5. Generate slots
     created_slots = 0
     for template in templates:
         # Create timezone-aware datetimes (UTC)
@@ -69,13 +83,8 @@ def launch_schedule(request: ScheduleLaunchRequest, db: Session = Depends(get_db
         end_dt = datetime.combine(target_date, template.end_time).replace(tzinfo=timezone.utc)
         
         while current_time + timedelta(minutes=duration) <= end_dt:
-            # Check if slot already exists
-            existing = db.query(Slot).filter(
-                Slot.doctor_id == request.doctor_id,
-                Slot.start_time == current_time
-            ).first()
-            
-            if not existing:
+            # Check if slot already exists in our pre-fetched set
+            if current_time not in existing_times:
                 new_slot = Slot(
                     doctor_id=request.doctor_id,
                     start_time=current_time,
@@ -85,8 +94,15 @@ def launch_schedule(request: ScheduleLaunchRequest, db: Session = Depends(get_db
                 )
                 db.add(new_slot)
                 created_slots += 1
+                # Add to set so we don't create it again in the same run (e.g. overlapping templates)
+                existing_times.add(current_time)
             
             current_time += timedelta(minutes=duration)
     
-    db.commit()
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to launch schedule: {str(e)}")
+
     return {"message": f"Successfully launched schedule. Created {created_slots} new slots.", "date": request.date}
