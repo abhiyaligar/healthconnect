@@ -1,6 +1,17 @@
 # HealthConnect
 
-A full-stack clinical scheduling and queue management platform built for hospitals and clinics.
+**🏆 1st Runner Up - Hackfusion 2.0 (AGM Engineering College)**
+
+## Problem Statement: FS-02 Healthcare Appointment Overbooking Stabilizer
+
+Hospitals often overbook appointments to maximize efficiency, leading to conflicts, long wait times, and patient dissatisfaction. **HealthConnect** was designed to intelligently manage overbooked slots and dynamically reschedule patients while maintaining fairness and minimizing disruption.
+
+### Key Features Addressed:
+- **Capacity-Aware Slot Management**: Intelligent booking system capable of handling concurrent "cancellation storms."
+- **Doctor Fatigue Optimization**: Real-time availability tracking synchronized with doctor workload.
+- **Queue Visualization**: Live dashboards with wait-time prediction for patients and staff.
+- **Conflict Resolver**: A sophisticated engine that balances priority and fairness during overbooking.
+- **Dynamic Rescheduling**: An automated system to minimize patient disruption when shifts occur.
 
 ---
 
@@ -11,6 +22,25 @@ HealthConnect manages the complete lifecycle of a patient's clinic visit:
 - Receptionists manage live queues, handle conflicts, and register walk-ins
 - Doctors conduct consultations, record vitals, write prescriptions, and complete sessions
 - Admins oversee users, system settings, and view analytics
+
+---
+
+## Hackathon Achievements
+- **End-to-End Automation**: Implemented a seamless flow from appointment booking to clinical consultation.
+- **Real-time Queue Management**: Developed a dynamic queue system for receptionists to manage patient flow efficiently.
+- **Secure Authentication**: Integrated custom OTP-based verification for secure user access.
+- **Robust Architecture**: Built with a scalable FastAPI backend and a responsive React frontend.
+
+---
+
+## Team & Contributors
+
+| Name | Role | Primary Contributions | GitHub |
+|------|------|-----------------------|--------|
+| **Abhishek Yaligar** | Full-Stack Lead & System Architect | End-to-End System Design, Core Backend & Database Engineering, Cloud Deployment, Frontend Integration | [@abhiyaligar](https://github.com/abhiyaligar) |
+| **Farhan** | Backend Reliability & QA | Unit & Integration Testing, API Validation, Performance Benchmarking | [@aifaru](https://github.com/aifaru) |
+| **Prajwal** | Frontend | UI/UX Design, React Component Implementation, Dashboard Logic | [@prajwalnmokashi03](https://github.com/prajwalnmokashi03) |
+| **Swaroop** | Presentation & QA | Project Presentation, Quality Assurance, Documentation | [@swaroopjoshi2005](https://github.com/swaroopjoshi2005) |
 
 ---
 
