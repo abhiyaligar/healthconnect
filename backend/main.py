@@ -23,6 +23,26 @@ settings = get_settings()
 # Force restart
 app = FastAPI(title=settings.PROJECT_NAME)
 
+# CORS configuration - Must be before routers to handle preflight correctly
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
+    "http://localhost:3000",
+    "https://healthconnect-8lzi.vercel.app",
+    "https://healthconnect-psi.vercel.app",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"https://healthconnect-8lzi.*\.vercel\.app",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
     return JSONResponse(
@@ -35,7 +55,7 @@ async def global_exception_handler(request, exc):
     logging.error(f"Global error: {str(exc)}", exc_info=True)
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal server error. Our team has been notified."},
+        content={"detail": f"Internal server error: {str(exc)}"},
     )
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
@@ -50,24 +70,6 @@ app.include_router(clinical_router, prefix="/api/v1/clinical", tags=["Clinical"]
 app.include_router(optimization_router, prefix="/api/v1/optimization", tags=["Optimization"])
 app.include_router(emergency_router, prefix="/api/v1/emergency", tags=["Emergency"])
 app.include_router(admin_router, prefix="/api/v1/admin", tags=["Admin"])
-
-ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:5175",
-    "http://localhost:3000",
-    "https://healthconnect-8lzi.vercel.app",
-    "https://healthconnect-psi.vercel.app",
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_origin_regex=r"https://healthconnect.*\.vercel\.app",
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 @app.get("/")
 async def root():
